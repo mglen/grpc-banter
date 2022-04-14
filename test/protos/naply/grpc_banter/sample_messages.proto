@@ -1,0 +1,36 @@
+syntax = "proto2";
+package naply.grpc_banter;
+option java_package = "naply.grpc_banter";
+option java_outer_classname = "SampleMessageProtos";
+
+enum TestEnum {
+  DEFAULT = 0;
+  FIRST = 1;
+  SECOND = 2;
+  BIGLY = 999;
+}
+
+// TODO, why are only optional fields in the FDS?
+// Troubleshoot by printing the protoc command the plugin uses.
+
+message SimpleMessage {
+  required string message = 1;
+}
+
+message ComplexMessage {
+  required string requiredMessage = 2;
+  repeated string repeatedMessage = 3;
+  optional int32 integer = 4;
+  optional int64 long = 5;
+  optional TestEnum enum1 = 6;
+  optional TestEnum enum2 = 7;
+  optional TestEnum enum3 = 8;
+}
+
+message NestedMessage {
+  required string outerString = 1;
+  required InnerMessage inner = 2;
+  message InnerMessage {
+    required string innerString = 1;
+  }
+}

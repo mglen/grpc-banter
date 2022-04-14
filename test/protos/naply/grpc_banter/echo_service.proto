@@ -1,0 +1,29 @@
+syntax = "proto2";
+import "naply/grpc_banter/sample_messages.proto";
+package naply.grpc_banter;
+option java_package = "naply.grpc_banter";
+option java_outer_classname = "EchoServiceProtos";
+
+service EchoService {
+  rpc Echo (EchoRequest) returns (EchoResponse);
+  rpc Error (ErrorRequest) returns (ErrorResponse);
+
+  rpc Test1(ComplexMessage) returns (EchoResponse);
+  rpc Test2(NestedMessage) returns (EchoResponse);
+}
+
+message EchoRequest {
+  required string message = 1;
+}
+
+message EchoResponse {
+  required string reply = 1;
+}
+
+message ErrorRequest {
+  optional string unused = 1;
+}
+
+message ErrorResponse {
+  optional string unused = 1;
+}

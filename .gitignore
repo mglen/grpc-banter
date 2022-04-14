@@ -1,0 +1,9 @@
+/.calva
+/.clj-kondo
+/.idea
+/.lsp
+/target
+/classes
+/.lein-*
+/.nrepl-port
+*.iml
