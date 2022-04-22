@@ -18,11 +18,12 @@ Basic call to a local server:
 ```clojure
 (require '[naply.grpc-banter :as banter])
 
-(def client (banter/client {:target "localhost:8080"
-                        :file-descriptor-set "/tmp/echo-service.dsc"}))
+(def client
+  (banter/client {:target "localhost:8080"
+                  :file-descriptor-set "/tmp/echo-service.dsc"}))
 
-(def response (banter/call client "grpc_banter.EchoService/Echo" {:message "HelloWorld"}))
-; => {:reply "HelloWorld"}
+(def response (banter/call client "grpc_banter.EchoService/Echo" {:say "HelloWorld"}))
+; => {:echo "HelloWorld"}
 ```
 
 Status, headers, and trailers can be accessed from the response metadata:
@@ -84,11 +85,11 @@ service EchoService {
 }
 
 message EchoRequest {
-  required string message = 1;
+  required string say = 1;
 }
 
 message EchoResponse {
-  required string reply = 1;
+  required string echo = 1;
 }
 
 message ErrorRequest {
@@ -108,7 +109,7 @@ plugin and use it to compile a self-contained file descriptor set
 ```
 lein protodeps generate -v  | grep :protoc
 # set PROTOC_CMD="" to the value of :protoc, then run:
-find test/protos -name '*.proto' | xargs PROTOC_CMD --include_imports --proto_path=test/protos --descriptor_set_out=target/test-file-descriptor-set.dsc
+find test/protos -name '*.proto' | xargs $PROTOC_CMD --include_imports --proto_path=test/protos --descriptor_set_out=target/test-file-descriptor-set.dsc
 ```
 
 Run tests with `lein test`.

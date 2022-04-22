@@ -1,7 +1,7 @@
 (def proto-version "3.19.2") ;; protobuf version -- should be used when declaring protobuf dependencies
 (def grpc-version "1.45.0")  ;; gRPC version -- should be used when declaring gRPC dependencies
 
-(defproject runtime-grpc "0.1.0-SNAPSHOT"
+(defproject io.naply/grpc-banter "0.1.0-SNAPSHOT"
   :description "A runtime Clojure gRPC client"
   :url "https://github.com/mglen/grpc-banter"
   :license {:name "MIT License"
