@@ -49,6 +49,13 @@ Failed requests will result in an exception:
 ;  ... }
 ```
 
+All known service methods can be retrieved:
+```clojure
+(banter/methods client)
+; => #{"grpc_banter.EchoService/Echo"
+;      "grpc_banter.EchoService/Error"}
+```
+
 ### Configuration
 
 Client configuration options:

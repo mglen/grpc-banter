@@ -1,4 +1,5 @@
 (ns naply.grpc-banter-test
+  (:refer-clojure :exclude [methods])
   (:require [clojure.test :refer :all]
             [naply.grpc-banter :as banter])
   (:import (naply.grpc_banter TestGrpcServer)
@@ -15,6 +16,14 @@
                                                 :optional-fields-required true}))
             (println "Running test server on port" (.getPort server))
             (f))))
+
+(deftest methods
+  (testing "Returns all fully qualified gRPC service methods"
+    (is (= #{"naply.grpc_banter.EchoService/Echo"
+             "naply.grpc_banter.EchoService/Error"
+             "naply.grpc_banter.EchoService/Test1"
+             "naply.grpc_banter.EchoService/Test2"}
+           (banter/methods @test-client)))))
 
 (deftest validate
   (testing "Validation passing"

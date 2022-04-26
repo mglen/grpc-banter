@@ -15,6 +15,8 @@ import naply.grpc_banter.internal.ServerMetadataInterceptor;
 import java.io.Closeable;
 import java.io.InputStream;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 public class Client implements Closeable {
 
@@ -57,6 +59,13 @@ public class Client implements Closeable {
         return getRequestMethod(serviceName, methodName).getInputType();
     }
 
+    public Set<String> getAllServicesMethods() {
+        return fileDescriptorRegistry.getAllServices().stream()
+                .flatMap(s -> s.getMethods().stream()
+                        .map(m -> s.getFullName() + "/" + m.getName()))
+                .collect(Collectors.toSet());
+    }
+
     private Descriptors.MethodDescriptor getRequestMethod(String serviceName, String methodName) {
         Descriptors.ServiceDescriptor serviceByName = fileDescriptorRegistry.findServiceByName(serviceName);
         Descriptors.MethodDescriptor methodDescriptor = serviceByName.findMethodByName(methodName);
@@ -95,7 +104,7 @@ public class Client implements Closeable {
 
     private static MethodDescriptor.Marshaller<DynamicMessage> buildDynamicMarshaller(Descriptors.Descriptor type) {
         Parser<DynamicMessage> parser = DynamicMessage.newBuilder(type).buildPartial().getParserForType();
-        return new MethodDescriptor.Marshaller<>() {
+        return new MethodDescriptor.Marshaller<DynamicMessage>() {
             @Override
             public InputStream stream(DynamicMessage dynamicMessage) {
                 return dynamicMessage.toByteString().newInput();

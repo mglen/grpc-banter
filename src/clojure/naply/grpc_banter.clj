@@ -1,4 +1,5 @@
 (ns naply.grpc-banter
+  (:refer-clojure :exclude [methods])
   (:require [naply.grpc-banter.schema :as s])
   (:import (naply.grpc_banter MessageConverter FileDescriptorRegistry Client)))
 
@@ -9,6 +10,9 @@
     (when (or (nil? method) (some? _extra))
       (throw (IllegalArgumentException. "full-method must be in form 'Service/Method'")))
     [service method]))
+
+(defn methods [client]
+  (.getAllServicesMethods (:java-client client)))
 
 (defn validate
   "Returns nil on success, a map of keys and errors on failure"

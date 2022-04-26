@@ -52,6 +52,10 @@ public class FileDescriptorRegistry {
         }
     }
 
+    public Collection<Descriptors.ServiceDescriptor> getAllServices() {
+        return serviceDescriptorsByFullName.values();
+    }
+
     public Descriptors.Descriptor findMessageTypeByFullName(String fullName) {
         return messageTypesByFullName.get(fullName);
     }
