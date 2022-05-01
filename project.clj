@@ -10,8 +10,9 @@
   :dependencies
   [[org.clojure/clojure "1.11.0"]
    [io.grpc/grpc-protobuf ~grpc-version]
+   [io.grpc/grpc-core ~grpc-version :exclusions [io.grpc/grpc-api]]
+   [io.grpc/grpc-netty-shaded ~grpc-version :exclusions [io.grpc/grpc-core]]
    [io.grpc/grpc-stub ~grpc-version]
-   [io.grpc/grpc-netty-shaded ~grpc-version]
    [org.slf4j/slf4j-api "1.7.32"]
    [javax.annotation/javax.annotation-api "1.3.2"]
    [metosin/malli "0.8.4"]]
