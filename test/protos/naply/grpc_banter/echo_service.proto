@@ -13,11 +13,11 @@ service EchoService {
 }
 
 message EchoRequest {
-  required string message = 1;
+  required string say = 1;
 }
 
 message EchoResponse {
-  required string reply = 1;
+  required string echo = 1;
 }
 
 message ErrorRequest {

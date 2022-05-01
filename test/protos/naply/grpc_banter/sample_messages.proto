@@ -22,9 +22,7 @@ message ComplexMessage {
   repeated string repeatedMessage = 3;
   optional int32 integer = 4;
   optional int64 long = 5;
-  optional TestEnum enum1 = 6;
-  optional TestEnum enum2 = 7;
-  optional TestEnum enum3 = 8;
+  optional TestEnum enum = 6;
 }
 
 message NestedMessage {

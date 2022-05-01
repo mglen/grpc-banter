@@ -14,7 +14,7 @@ are highly important.
 
 ## Usage
 
-Basic call to a local server:
+Basic rpc call example:
 ```clojure
 (require '[naply.grpc-banter :as banter])
 
@@ -22,7 +22,7 @@ Basic call to a local server:
   (banter/client {:target "localhost:8080"
                   :file-descriptor-set "/tmp/echo-service.dsc"}))
 
-(def response (banter/call client "grpc_banter.EchoService/Echo" {:say "HelloWorld"}))
+(banter/call client "grpc_banter.EchoService/Echo" {:say "HelloWorld"})
 ; => {:echo "HelloWorld"}
 ```
 
@@ -56,6 +56,32 @@ All known service methods can be retrieved:
 ;      "grpc_banter.EchoService/Error"}
 ```
 
+The protobuf source for all examples is:
+```protobuf
+package grpc_banter;
+
+service EchoService {
+  rpc Echo (EchoRequest) returns (EchoResponse);
+  rpc Error (ErrorRequest) returns (ErrorResponse);
+}
+
+message EchoRequest {
+  required string say = 1;
+}
+
+message EchoResponse {
+  required string echo = 1;
+}
+
+message ErrorRequest {
+  optional string unused = 1;
+}
+
+message ErrorResponse {
+  optional string unused = 1;
+}
+```
+
 ### Configuration
 
 Client configuration options:
@@ -81,31 +107,15 @@ Client configuration options:
      :optional-fields-required false
      }))
 ```
-
-The protobuf sources for the above example are:
-```protobuf
-package grpc_banter;
-
-service EchoService {
-  rpc Echo (EchoRequest) returns (EchoResponse);
-  rpc Error (ErrorRequest) returns (ErrorResponse);
-}
-
-message EchoRequest {
-  required string say = 1;
-}
-
-message EchoResponse {
-  required string echo = 1;
-}
-
-message ErrorRequest {
-  optional string unused = 1;
-}
-
-message ErrorResponse {
-  optional string unused = 1;
-}
+Certain configuration options can also be supplied at request time:
+```clojure
+(banter/call client
+             {:method "grpc_banter.EchoService/Echo"
+              :enums-as-keywords true
+              :response-fields-as-keywords true
+              :include-raw-types false
+              :optional-fields-required false}
+             {:say "Example with configuration"})
 ```
 
 ## Development

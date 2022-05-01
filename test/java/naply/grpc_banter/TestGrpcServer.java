@@ -48,7 +48,7 @@ public class TestGrpcServer implements Closeable {
         @Override
         public void echo(EchoServiceProtos.EchoRequest request, StreamObserver<EchoServiceProtos.EchoResponse> responseObserver) {
             EchoServiceProtos.EchoResponse response = EchoServiceProtos.EchoResponse.newBuilder()
-                    .setReply(request.getMessage())
+                    .setEcho(request.getSay())
                     .build();
             responseObserver.onNext(response);
             responseObserver.onCompleted();
