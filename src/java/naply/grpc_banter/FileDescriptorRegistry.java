@@ -11,25 +11,20 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class FileDescriptorRegistry {
 
     private static final Logger log = LoggerFactory.getLogger(FileDescriptorRegistry.class);
 
-    // Full names for a `service ServiceName {}` grpc service. Generally should only be one, this is purely a convenience
-    // to let the client specify service by short name.
-    // TODO: this feature is not necessary, should be cut.
-    private final Map<String, Set<String>> serviceFullNamesByShortName;
     private final Map<String, Descriptors.ServiceDescriptor> serviceDescriptorsByFullName;
     private final Map<String, Descriptors.Descriptor> messageTypesByFullName;
     private final Map<String, Descriptors.EnumDescriptor> enumTypesByFullName;
 
     public FileDescriptorRegistry(
-            Map<String, Set<String>> serviceFullNamesByShortName,
             Map<String, Descriptors.ServiceDescriptor> serviceDescriptorsByFullName,
             Map<String, Descriptors.Descriptor> messageTypesByFullName,
             Map<String, Descriptors.EnumDescriptor> enumTypesByFullName) {
-        this.serviceFullNamesByShortName = serviceFullNamesByShortName;
         this.serviceDescriptorsByFullName = serviceDescriptorsByFullName;
         this.messageTypesByFullName = messageTypesByFullName;
         this.enumTypesByFullName = enumTypesByFullName;
@@ -38,18 +33,7 @@ public class FileDescriptorRegistry {
     public Descriptors.ServiceDescriptor findServiceByName(String name) {
         if (serviceDescriptorsByFullName.containsKey(name))
             return serviceDescriptorsByFullName.get(name);
-        Set<String> packages = serviceFullNamesByShortName.get(name);
-        if (packages == null || packages.isEmpty()) {
-            throw new ServiceResolutionError(String.format("Service [%s] not found", name));
-        } else if (packages.size() > 1) {
-            throw new ServiceResolutionError(String.format(
-                    "Found matching service [%s] under multiple packages=%s." +
-                            "You must specify the full service path",
-                    name, packages));
-        } else {
-            // Single match
-            return serviceDescriptorsByFullName.get(packages.iterator().next());
-        }
+        throw new ServiceResolutionError(String.format("Service [%s] not found", name));
     }
 
     public Collection<Descriptors.ServiceDescriptor> getAllServices() {
@@ -60,15 +44,11 @@ public class FileDescriptorRegistry {
         return messageTypesByFullName.get(fullName);
     }
 
-    public Descriptors.EnumDescriptor findEnumTypeByFullName(String fullName) {
-        return enumTypesByFullName.get(fullName);
-    }
-
-    public static FileDescriptorRegistry fromFileDescriptorSetFile(String fileName) {
+    public static FileDescriptorRegistry fromFileDescriptorSet(String fileName) {
         File file = new File(fileName);
         DescriptorProtos.FileDescriptorSet fds;
-        try {
-            fds = DescriptorProtos.FileDescriptorSet.parseFrom(new FileInputStream(file));
+        try (FileInputStream stream = new FileInputStream(file)){
+            fds = DescriptorProtos.FileDescriptorSet.parseFrom(stream);
         } catch (IOException e) {
             throw new RuntimeException(String.format("Could not read=[%s]", file.getAbsoluteFile()), e);
         }
@@ -82,7 +62,9 @@ public class FileDescriptorRegistry {
         List<Descriptors.Descriptor> allMessageTypes = new ArrayList<>();
         List<Descriptors.EnumDescriptor> allEnumTypes = new ArrayList<>();
         for (Descriptors.FileDescriptor fd : fileDescriptorsByName.values()) {
-            List<Descriptors.Descriptor> messageTypes = getNestedMessageTypes(fd.getMessageTypes());
+            List<Descriptors.Descriptor> messageTypes = fd.getMessageTypes().stream()
+                    .flatMap(FileDescriptorRegistry::getNestedMessageTypes)
+                    .collect(Collectors.toList());
             if (log.isDebugEnabled()) {
                 log.debug("fileDescriptor=[{}] has services={} messageTypes={} enumTypes={}",
                         fd.getFullName(),
@@ -95,16 +77,8 @@ public class FileDescriptorRegistry {
             allEnumTypes.addAll(fd.getEnumTypes());
         }
 
-        Map<String, Descriptors.ServiceDescriptor> serviceDescriptorsByFullName = new HashMap<>();
-        Map<String, Set<String>> serviceFullNamesByShortName = new HashMap<>();
-        for (Descriptors.ServiceDescriptor service : allServices) {
-            serviceDescriptorsByFullName.put(service.getFullName(), service);
-            serviceFullNamesByShortName.compute(service.getName(), (k, v) -> {
-                Set<String> fullNames = v == null ? new HashSet<>() : v;
-                fullNames.add(service.getFullName());
-                return fullNames;
-            });
-        }
+        Map<String, Descriptors.ServiceDescriptor> serviceDescriptorsByFullName = allServices.stream()
+                .collect(Collectors.toMap(Descriptors.ServiceDescriptor::getFullName, v -> v));
 
         Map<String, Descriptors.Descriptor> messageTypesByFullName = allMessageTypes.stream()
                 .collect(Collectors.toMap(Descriptors.Descriptor::getFullName, v -> v));
@@ -113,18 +87,17 @@ public class FileDescriptorRegistry {
                 .collect(Collectors.toMap(Descriptors.EnumDescriptor::getFullName, v -> v));
 
         return new FileDescriptorRegistry(
-                serviceFullNamesByShortName,
                 serviceDescriptorsByFullName,
                 messageTypesByFullName,
                 enumTypesByFullName);
     }
 
-    private static List<Descriptors.Descriptor> getNestedMessageTypes(List<Descriptors.Descriptor> messageTypes) {
-        List<Descriptors.Descriptor> finalMessageTypes = new ArrayList<>(messageTypes);
-        for (Descriptors.Descriptor messageType : messageTypes) {
-            finalMessageTypes.addAll(messageType.getNestedTypes());
-        }
-        return finalMessageTypes;
+    private static Stream<Descriptors.Descriptor> getNestedMessageTypes(Descriptors.Descriptor messageType) {
+        return Stream.concat(
+                Stream.of(messageType),
+                messageType.getNestedTypes().stream()
+                        .flatMap(FileDescriptorRegistry::getNestedMessageTypes)
+        );
     }
     
     private static Map<String, Descriptors.FileDescriptor> buildFileDescriptors(DescriptorProtos.FileDescriptorSet fds) {
@@ -169,11 +142,12 @@ public class FileDescriptorRegistry {
     }
 
     public String toString() {
-        return "services=" +
+        return "FileDescriptorSet{services=" +
                 serviceDescriptorsByFullName.keySet() +
                 " messageTypes=" +
                 messageTypesByFullName.keySet() +
                 " enumTypes=" +
-                enumTypesByFullName.keySet();
+                enumTypesByFullName.keySet() +
+                "}";
     }
 }
