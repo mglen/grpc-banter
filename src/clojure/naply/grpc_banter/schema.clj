@@ -4,7 +4,7 @@
             [malli.util :as mu]
             [malli.error :as me])
   (:import (com.google.protobuf Descriptors$Descriptor
-                                Descriptors$FieldDescriptor)))
+                                Descriptors$FieldDescriptor ByteString)))
 
 (def ConverterConfigSchema
   [:map {:closed true}
@@ -51,9 +51,11 @@
 (declare message-schema)
 
 (def custom-errors
+  ;; TODO, error message with protobuf schema info
   (-> me/default-errors
       (assoc ::m/missing-key
              {:error/fn (fn [_err _] (str "field is required"))})
+      ;; TODO: print type of parent value, check for toString. Walk stack to check how its rendering schema
       #_(assoc ::m/invalid-type
                {:error/fn (fn [{:keys [value schema] :as wah} _]
                             (str "value " value " has wrong type for schema " schema))})))
@@ -64,11 +66,13 @@
   (case (.name (.getJavaType f-desc))
         "INT" [:int {:min Integer/MIN_VALUE :max Integer/MAX_VALUE}]
         "LONG" [:int {:min Long/MIN_VALUE :max Long/MAX_VALUE}]
-        "FLOAT" [:double {:min Float/MIN_VALUE :max Float/MAX_VALUE}]
-        "DOUBLE" [:double {:min Double/MIN_VALUE :max Double/MAX_VALUE}]
+        "FLOAT" float?
+        "DOUBLE" [:or float? :double]
         "BOOLEAN" :boolean
         "STRING" :string
-        "BYTE_STRING" bytes?
+        "BYTE_STRING" [:fn
+                       {:error/message "Should be a ByteString"}
+                       (partial instance? ByteString)]
         "ENUM"  (let [enum-values (.getValues (.getEnumType f-desc))]
                   [:or (into [:enum] (map #(.getName %) enum-values)) ;; value as string
                        (into [:enum] (map #(.getNumber %) enum-values)) ;; value s as field number

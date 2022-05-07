@@ -46,17 +46,41 @@ public class TestGrpcServer implements Closeable {
 
     private static class EchoService extends EchoServiceGrpc.EchoServiceImplBase {
         @Override
-        public void echo(EchoServiceProtos.EchoRequest request, StreamObserver<EchoServiceProtos.EchoResponse> responseObserver) {
-            EchoServiceProtos.EchoResponse response = EchoServiceProtos.EchoResponse.newBuilder()
-                    .setEcho(request.getSay())
-                    .build();
+        public void echo(
+                EchoServiceProtos.EchoRequest request,
+                StreamObserver<EchoServiceProtos.EchoResponse> responseObserver) {
+            EchoServiceProtos.EchoResponse response =
+                    EchoServiceProtos.EchoResponse.newBuilder()
+                            .setEcho(request.getSay())
+                            .build();
             responseObserver.onNext(response);
             responseObserver.onCompleted();
         }
 
         @Override
-        public void error(EchoServiceProtos.ErrorRequest request, StreamObserver<EchoServiceProtos.ErrorResponse> responseObserver) {
-            responseObserver.onError(Status.INTERNAL.withDescription("All requests will fail.").asException());
+        public void error(
+                EchoServiceProtos.ErrorRequest request,
+                StreamObserver<EchoServiceProtos.ErrorResponse> responseObserver) {
+            responseObserver.onError(
+                    Status.INTERNAL
+                            .withDescription("All requests will fail.")
+                            .asException());
+        }
+
+        @Override
+        public void allFieldTypesTest(
+                SampleMessageProtos.AllFieldTypesMessage request,
+                StreamObserver<SampleMessageProtos.AllFieldTypesMessage> responseObserver) {
+            responseObserver.onNext(request);
+            responseObserver.onCompleted();
+        }
+
+        @Override
+        public void nestedMessageTest(
+                SampleMessageProtos.NestedMessage request,
+                StreamObserver<SampleMessageProtos.NestedMessage> responseObserver) {
+            responseObserver.onNext(request);
+            responseObserver.onCompleted();
         }
     }
 

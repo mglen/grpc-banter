@@ -7,28 +7,59 @@ enum TestEnum {
   DEFAULT = 0;
   FIRST = 1;
   SECOND = 2;
-  BIGLY = 999;
+  LAST = 999;
 }
-
-// TODO, why are only optional fields in the FDS?
-// Troubleshoot by printing the protoc command the plugin uses.
 
 message SimpleMessage {
   required string message = 1;
 }
 
-message ComplexMessage {
-  required string requiredMessage = 2;
-  repeated string repeatedMessage = 3;
-  optional int32 integer = 4;
-  optional int64 long = 5;
-  optional TestEnum enum = 6;
+message AllFieldTypesMessage {
+  required string string = 1;
+  required int32 integer = 2;
+  required int64 long = 3;
+  required double double = 4;
+  required float float = 5;
+  required bool boolean = 6;
+  required bytes bytes = 7;
+  required TestEnum enum = 8;
+  required TestMessage message = 9;
+
+  optional string optionalString = 101;
+  optional int32 optionalInteger = 102;
+  optional int64 optionalLong = 103;
+  optional double optionalDouble = 104;
+  optional float optionalFloat = 105;
+  optional bool optionalBoolean = 106;
+  optional bytes optionalBytes = 107;
+  optional TestEnum optionalEnum = 108;
+  optional TestMessage optionalMessage = 109;
+
+  repeated string repeatedString = 1001;
+  repeated int32 repeatedInteger = 1002;
+  repeated int64 repeatedLong = 1003;
+  repeated double repeatedDouble = 1004;
+  repeated float repeatedFloat = 1005;
+  repeated bool repeatedBoolean = 1006;
+  repeated bytes repeatedBytes = 1007;
+  repeated TestEnum repeatedEnum = 1008;
+  repeated TestMessage repeatedMessage = 1009;
+}
+
+message TestMessage {
+  required string string = 1;
 }
 
 message NestedMessage {
   required string outerString = 1;
   required InnerMessage inner = 2;
+
   message InnerMessage {
     required string innerString = 1;
+    required DoubleInnerMessage inner = 2;
+
+    message DoubleInnerMessage {
+      required string doubleInnerString = 1;
+    }
   }
 }

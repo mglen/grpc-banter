@@ -8,8 +8,8 @@ service EchoService {
   rpc Echo (EchoRequest) returns (EchoResponse);
   rpc Error (ErrorRequest) returns (ErrorResponse);
 
-  rpc Test1(ComplexMessage) returns (EchoResponse);
-  rpc Test2(NestedMessage) returns (EchoResponse);
+  rpc AllFieldTypesTest (AllFieldTypesMessage) returns (AllFieldTypesMessage);
+  rpc NestedMessageTest (NestedMessage) returns (NestedMessage);
 }
 
 message EchoRequest {
