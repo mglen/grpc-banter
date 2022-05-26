@@ -1,53 +1,79 @@
 (ns naply.grpc-banter
   (:refer-clojure :exclude [methods])
-  (:require [naply.grpc-banter.schema :as s])
-  (:import (naply.grpc_banter Client)))
+  (:require [naply.grpc-banter.schema :as s]
+            [naply.grpc-banter.converter :as c])
+  (:import (naply.grpc_banter Client FileDescriptorRegistry)
+           (io.grpc StatusRuntimeException)))
 
-(defn- get-service-and-method [{:keys [service method]}]
+(defn- get-service-and-method
+  "Validate and provide the inputted service and method"
+  [{:keys [service method]}]
   (if service
     [service method]
     (let [[_service _method _extra] (clojure.string/split method #"/")]
       (when (or (nil? _method) (some? _extra))
-        (throw (IllegalArgumentException. "method must be in form 'package.Service/Method'")))
+        (throw (IllegalArgumentException.
+                 (str "method must be in form 'package.Service/Method' but was " method))))
       [_service _method])))
 
-(defn methods [client]
-  (.getAllServicesMethods (:java-client client)))
+(defn get-method-descriptor [{:keys [registry]} request]
+  (let [[service method] (get-service-and-method request)
+        service-descriptor (.findServiceByName registry service)
+        method-descriptor (.findMethodByName service-descriptor method)]
+    (when-not method-descriptor
+      (throw (RuntimeException. (format "Method=[%s] not found in service=[%s]" method service))))
+    method-descriptor))
+
+(defn methods
+  "Return all grpc methods discovered in the file descriptor set."
+  [client]
+  (.getAllServiceMethods (:registry client)))
 
 (defn validate
-  "Returns nil on success, a map of keys and errors on failure"
+  "Validate the message matches the request schema of the grpc request.
+  Returns nil on success, a map of message fields and their errors on failure."
   ([client request message]
    (let [_request (if (string? request) {:method request} request)
          _request (s/decode-request _request (:config client))
-         [service method] (get-service-and-method _request)]
-     (-> (.getRequestProto (:java-client client) service method)
-         (s/validate _request message)))))
+         method-descriptor (get-method-descriptor client _request)
+         request-message-type (.getInputType method-descriptor)]
+     (s/validate request-message-type _request message))))
 
 (defn call
-  "Make a synchronous call the gRPC service, returning the response message
+  "Execute a synchronous call the gRPC service, returning the response message
   as a map of fields and values. Headers, trailers, and status are included
   as metadata. Errors are returned as runtime exceptions."
   ([client request message]
-   (let [_request (if (string? request) {:method request} request)
-         _request (s/decode-request _request (:config client))
-         [service method] (get-service-and-method _request)]
-     (when-let [errors (-> (.getRequestProto (:java-client client) service method)
-                           (s/validate _request message))]
+   (let [request (if (string? request) {:method request} request)
+         request (s/decode-request request (:config client))
+         method-descriptor (get-method-descriptor client request)
+         request-message-type (.getInputType method-descriptor)
+         response-message-type (.getOutputType method-descriptor)]
+     (when-let [errors (s/validate request-message-type request message)]
        (throw (ex-info "Request message failed validation"
-                       {:request _request
+                       {:request request
                         :message message
                         :errors  errors})))
-     (.callMethod (:java-client client) service method message))))
+     (try
+       (c/RpcResponse->clj
+         request
+         (.callMethod (:java-client client)
+                      method-descriptor
+                      (c/clj->message request message request-message-type))
+         response-message-type)
+       (catch StatusRuntimeException e
+         (throw (c/statusRuntimeException->exception-info request e)))))))
 
-(defn client [config]
+(defn client
+  "Creates and returns a grpc-banter client."
+  [config]
   (let [config (s/decode-client-config config)]
-    {:java-client (Client/create config)
-     :config config}))
+    {:java-client (Client/create (:target config))
+     :registry    (FileDescriptorRegistry/fromFileDescriptorSet
+                    ^String (:file-descriptor-set config))
+     :config      config}))
 
 (comment
-  (def fdr (FileDescriptorRegistry/fromFileDescriptorSetFile "target/file_descriptor_set.dsc"))
-  (def message (.findMessageTypeByFullName fdr "runtime_grpc.HelloRequest"))
-  (def foo (MessageConverter/cljToMessage message {:greeting {:message "foo"}}))
 
   (def test-client (partial call (client "target/file_descriptor_set.dsc" "localhost:8082")))
   (def response (test-client "runtime_grpc.HelloService"

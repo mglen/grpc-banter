@@ -44,6 +44,13 @@ public class FileDescriptorRegistry {
         return messageTypesByFullName.get(fullName);
     }
 
+    public Set<String> getAllServiceMethods() {
+        return getAllServices().stream()
+                .flatMap(s -> s.getMethods().stream()
+                        .map(m -> s.getFullName() + "/" + m.getName()))
+                .collect(Collectors.toSet());
+    }
+
     public static FileDescriptorRegistry fromFileDescriptorSet(String fileName) {
         File file = new File(fileName);
         DescriptorProtos.FileDescriptorSet fds;

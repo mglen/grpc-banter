@@ -173,7 +173,7 @@
        "double" ["should be a float" "should be a double"]
        "float" ["should be a float"]
        "boolean" ["should be a boolean"]
-       "bytes" ["Should be a ByteString"]
+       "bytes" ["Should be a ByteString or byte[] array"]
        "enum" ["should be either DEFAULT, FIRST, SECOND or LAST"
                "should be either 0, 1, 2 or 999"
                "should be either :DEFAULT, :FIRST, :SECOND or :LAST"]
@@ -185,7 +185,7 @@
        "optionalDouble" ["should be a float" "should be a double"]
        "optionalFloat" ["should be a float"]
        "optionalBoolean" ["should be a boolean"]
-       "optionalBytes" ["Should be a ByteString"]
+       "optionalBytes" ["Should be a ByteString or byte[] array"]
        "optionalEnum" ["should be either DEFAULT, FIRST, SECOND or LAST"
                        "should be either 0, 1, 2 or 999"
                        "should be either :DEFAULT, :FIRST, :SECOND or :LAST"]
@@ -219,7 +219,7 @@
        "repeatedDouble" [["should be a float" "should be a double"]]
        "repeatedFloat" [["should be a float"]]
        "repeatedBoolean" [["should be a boolean"]]
-       "repeatedBytes" [["Should be a ByteString"]]
+       "repeatedBytes" [["Should be a ByteString or byte[] array"]]
        "repeatedEnum" [["should be either DEFAULT, FIRST, SECOND or LAST"
                         "should be either 0, 1, 2 or 999"
                         "should be either :DEFAULT, :FIRST, :SECOND or :LAST"]]
@@ -266,7 +266,7 @@
       (let [resp (banter/call @test-client
                               "naply.grpc_banter.EchoService/Error"
                               {:unused "Gonna fail"})]
-        (is (not (any? resp)) "Expected exception but got response"))
+        (is (not (any? resp)) (str "Expected exception but got response" resp)))
       (catch ExceptionInfo ex
         (is (= "gRPC server responded with error status=[INTERNAL] description=[All requests will fail.]"
                (ex-message ex)))

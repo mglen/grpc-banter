@@ -1,8 +1,5 @@
 package naply.grpc_banter;
 
-import clojure.lang.Associative;
-import clojure.lang.Keyword;
-import clojure.lang.PersistentHashMap;
 import com.google.protobuf.Descriptors;
 import com.google.protobuf.DynamicMessage;
 import com.google.protobuf.InvalidProtocolBufferException;
@@ -14,65 +11,25 @@ import naply.grpc_banter.internal.ServerMetadataInterceptor;
 
 import java.io.Closeable;
 import java.io.InputStream;
-import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 public class Client implements Closeable {
 
-    private final FileDescriptorRegistry fileDescriptorRegistry;
     private final ManagedChannel channel;
-    private final MessageConverter.Config config;
 
-    public static Client create(Map<Keyword, Object> config) {
-        String fileDescriptorSetPath = (String) config.get(Keyword.intern("file-descriptor-set"));
-        String target = (String) config.get(Keyword.intern("target"));
-        MessageConverter.Config converterConfig = new MessageConverter.Config(config);
+    public static Client create(String target) {
         ManagedChannel channel = ManagedChannelBuilder.forTarget(target)
                 .usePlaintext()
                 .build();
-        FileDescriptorRegistry fdr = FileDescriptorRegistry.fromFileDescriptorSetFile(fileDescriptorSetPath);
-        return new Client(fdr, channel, converterConfig);
+        return new Client(channel);
     }
 
-    public Client(FileDescriptorRegistry fileDescriptorRegistry,
-                  ManagedChannel managedChannel,
-                  MessageConverter.Config config) {
-        this.fileDescriptorRegistry = fileDescriptorRegistry;
+    public Client(ManagedChannel managedChannel) {
         this.channel = managedChannel;
-        this.config = config;
     }
 
-    public PersistentHashMap callMethod(String serviceName, String methodName, Associative message) {
-        Descriptors.MethodDescriptor methodDescriptor = getRequestMethod(serviceName, methodName);
-        DynamicMessage requestMessage = MessageConverter.cljToMessage(methodDescriptor.getInputType(), message, config);
-        RpcResponse response;
-        try {
-            response = internalCall(grpcMethodDescriptor(methodDescriptor), requestMessage);
-        } catch (StatusRuntimeException e) {
-            throw MessageConverter.statusRuntimeExceptionToExceptionInfo(e, config);
-        }
-        return MessageConverter.responseToClj(methodDescriptor.getOutputType(), response, config);
-    }
-
-    public Descriptors.Descriptor getRequestProto(String serviceName, String methodName) {
-        return getRequestMethod(serviceName, methodName).getInputType();
-    }
-
-    public Set<String> getAllServicesMethods() {
-        return fileDescriptorRegistry.getAllServices().stream()
-                .flatMap(s -> s.getMethods().stream()
-                        .map(m -> s.getFullName() + "/" + m.getName()))
-                .collect(Collectors.toSet());
-    }
-
-    private Descriptors.MethodDescriptor getRequestMethod(String serviceName, String methodName) {
-        Descriptors.ServiceDescriptor serviceByName = fileDescriptorRegistry.findServiceByName(serviceName);
-        Descriptors.MethodDescriptor methodDescriptor = serviceByName.findMethodByName(methodName);
-        if (methodDescriptor == null) {
-            throw new RuntimeException(String.format("Method=[%s] not found", methodName));
-        }
-        return methodDescriptor;
+    public RpcResponse callMethod(Descriptors.MethodDescriptor methodDescriptor, DynamicMessage message)
+            throws StatusRuntimeException {
+        return internalCall(grpcMethodDescriptor(methodDescriptor), message);
     }
 
     private RpcResponse internalCall(

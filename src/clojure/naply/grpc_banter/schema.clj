@@ -71,8 +71,8 @@
         "BOOLEAN" :boolean
         "STRING" :string
         "BYTE_STRING" [:fn
-                       {:error/message "Should be a ByteString"}
-                       (partial instance? ByteString)]
+                       {:error/message "Should be a ByteString or byte[] array"}
+                       #(or (instance? ByteString %) (bytes? %))]
         "ENUM"  (let [enum-values (.getValues (.getEnumType f-desc))]
                   [:or (into [:enum] (map #(.getName %) enum-values)) ;; value as string
                        (into [:enum] (map #(.getNumber %) enum-values)) ;; value s as field number
