@@ -49,7 +49,17 @@ Failed requests will result in an exception:
 ;  ... }
 ```
 
-All known service methods can be retrieved:
+Headers can be included with the request:
+```clojure
+(banter/call client
+  {:method "grpc_banter.EchoService/Echo"
+   :headers {"text-key" "text value"
+             :keyword-key ["multiple values"
+                           "can be passed as an iterable"]}}
+  {:say "Headers example"})
+```
+
+List all found service methods:
 ```clojure
 (banter/methods client)
 ; => #{"grpc_banter.EchoService/Echo"
@@ -130,6 +140,63 @@ find test/protos -name '*.proto' | xargs $PROTOC_CMD --include_imports --proto_p
 ```
 
 Run tests with `lein test`.
+
+## Message Conversion
+
+Returned message form is dependent on configuration.
+
+Fields can be specified by name as either strings or keywords, or by the field number.
+```clojure
+;; All valid
+{"say" "value"}
+{:say "value"}
+{1 "value"}
+```
+
+Numeric values will be coerced to their correct type as long as the number fits
+within its bounds, but `int*` values must be either `Integer` or `Long`.
+
+```clojure
+;; Valid
+{:float 1.5}
+{:float (Double/valueOf 5.55)}
+{:double 4/5}
+{:int32 (Long/valueOf 123)}
+{:int64 Long/MAX_VALUE}
+;; Invalid
+{:float Double/MAX_VALUE}
+{:int32 Long/MAX_VALUE}
+{:int32 1.0}
+```
+
+Enum values can be passed as keyword, string, integer value, or java type:
+```clojure
+{:enum :VALUE}
+{:enum "VALUE"}
+{:enum 1}
+{:enum TestEnum/VALUE}
+```
+
+Repeatable items can be any non-lazy sequence:
+```clojure
+{:vector ["1" "2" "3"]
+ :seq '("I" "II" "III")
+ :java-type (List/of 1 2 3)}
+```
+
+Booleans must be expressed as their correct type:
+
+```clojure
+{:boolean true}
+{:boolean false}
+```
+
+Nested messages can either be a map or the java type:
+
+```clojure
+{:nested-message {:field "value"}}
+{:nested-message ^Message msg}
+```
 
 ## Missing Support
 
