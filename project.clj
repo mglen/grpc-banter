@@ -19,7 +19,6 @@
 
   :source-paths ["src/clojure"]
   :java-source-paths ["src/java"]
-  :resource-paths ["src/resources"]
   :javac-options ["-Xlint:unchecked"]
   :test-paths ["test/clojure"]
 
@@ -30,6 +29,7 @@
   {:test
    {:dependencies [[com.gfredericks/test.chuck "0.2.13"]]
     :java-source-paths ["src/java" "test/java" "target/test-gen"]
+    :resource-paths ["test/resources"]
     :repl-options {:init-ns naply.grpc-banter-test}}
 
    :dev
