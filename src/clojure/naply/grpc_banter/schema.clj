@@ -21,14 +21,21 @@
      [:file-descriptor-set :string]]))
 
 (def RequestSchema
-  (mu/merge
-    ConverterConfigSchema
+  (let [common (mu/merge
+                 ConverterConfigSchema
+                 [:map {:closed true}
+                  [:headers {:default {}} [:map-of
+                                           [:or :keyword :string]
+                                           [:or :string [:* :string]]]]])]
     [:multi {:dispatch #(contains? % :service)}
-     [false [:map {:closed true}
-             [:method [:re {:error/message "Must be in form 'package.Service/Method'"} #"[^/]+/[^/]+"]]]]
-     [true [:map {:closed true}
-            [:method :string]
-            [:service :string]]]]))
+     [false (mu/merge common
+              [:map {:closed true}
+               [:method [:re {:error/message "Must be in form 'package.Service/Method'"} #"[^/]+/[^/]+"]]])]
+     [true (mu/merge common
+              [:map {:closed true}
+               [:method :string]
+               [:service :string]])]]))
+
 
 (defn- decode-config
   "Return the configuration with defaults applied. Throw if the config does not conform."

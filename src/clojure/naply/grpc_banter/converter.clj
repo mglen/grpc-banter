@@ -11,8 +11,11 @@
            (naply.grpc_banter MessageConverter)
            (naply.grpc_banter.internal RpcResponse)))
 
-(declare message->clj)
-(declare clj->message)
+(declare Message->clj)
+(declare clj->Message)
+
+(defn clj->Metadata [metadata]
+  (MessageConverter/cljToAsciiMetadata metadata))
 
 (defn Status->clj
   [^Status status]
@@ -33,7 +36,7 @@
 
     ;; Recurse through messages
     "MESSAGE"
-    (fn [^Message msg] (message->clj config msg (.getDescriptorForType msg)))
+    (fn [^Message msg] (Message->clj config msg (.getDescriptorForType msg)))
 
     (throw (RuntimeException. (str "Unsupported field type" (.getJavaType field-desc))))))
 
@@ -60,7 +63,7 @@
                              (-> f-desc .toProto .getLabel)))))))
 
 
-(defn message->clj
+(defn Message->clj
   "Convert a Protobuf message to a clojure map of fields and values."
   [config
    ^Message message
@@ -89,7 +92,7 @@
    ^RpcResponse response
    ^Descriptors$Descriptor message-type]
   (let [raw-message (.getMessage response)
-        message (message->clj config raw-message message-type)
+        message (Message->clj config raw-message message-type)
         raw-headers (.getHeaders response)
         raw-trailers (.getTrailers response)
         raw-status (.getStatus response)]
@@ -172,7 +175,7 @@
             "MESSAGE"
             (cond
               (instance? Map field-value)
-              (clj->message config
+              (clj->Message config
                             field-value
                             (.getMessageType f-desc))
               (instance? MessageLite field-value) field-value)
@@ -204,7 +207,7 @@
       (throw (RuntimeException.
                (format "Field [%s] is required but no value was supplied" f-desc))))))
 
-(defn clj->message
+(defn clj->Message
   "Convert a clojure map of fields and values to a protobuf message"
   ^DynamicMessage
   [config message-map ^Descriptors$Descriptor message-type]
@@ -215,7 +218,7 @@
       (.setField message-builder f-desc field-value))
     (.build message-builder)))
 
-(defn statusRuntimeException->exception-info
+(defn StatusRuntimeException->exception-info
   [config ^StatusRuntimeException err]
   (let [raw-status (.getStatus err)
         raw-trailers (.getTrailers err)

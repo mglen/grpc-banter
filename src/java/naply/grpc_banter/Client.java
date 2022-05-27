@@ -27,25 +27,23 @@ public class Client implements Closeable {
         this.channel = managedChannel;
     }
 
-    public RpcResponse callMethod(Descriptors.MethodDescriptor methodDescriptor, DynamicMessage message)
+    public RpcResponse callMethod(
+            Descriptors.MethodDescriptor methodDescriptor,
+            DynamicMessage message,
+            Metadata headers)
             throws StatusRuntimeException {
-        return internalCall(grpcMethodDescriptor(methodDescriptor), message);
-    }
-
-    private RpcResponse internalCall(
-            MethodDescriptor<DynamicMessage, DynamicMessage> methodDescriptor,
-            DynamicMessage message) {
-        if (MethodDescriptor.MethodType.UNARY.equals(methodDescriptor.getType())) {
+        MethodDescriptor<DynamicMessage, DynamicMessage> grpcMethodDescriptor = grpcMethodDescriptor(methodDescriptor);
+        if (MethodDescriptor.MethodType.UNARY.equals(grpcMethodDescriptor.getType())) {
             RpcResponse.Builder responseBuilder = RpcResponse.builder();
-            Channel finalChannel = ClientInterceptors.intercept(channel, ServerMetadataInterceptor.create(responseBuilder));
+            Channel finalChannel = ClientInterceptors.intercept(channel, new ServerMetadataInterceptor(responseBuilder, headers));
             DynamicMessage responseMessage = ClientCalls.blockingUnaryCall(
                     finalChannel,
-                    methodDescriptor,
+                    grpcMethodDescriptor,
                     CallOptions.DEFAULT,
                     message);
             return responseBuilder.message(responseMessage).build();
         } else {
-            throw new RuntimeException(String.format("Method type=[%s] is not supported", methodDescriptor.getType()));
+            throw new RuntimeException(String.format("Method type=[%s] is not supported", grpcMethodDescriptor.getType()));
         }
     }
 

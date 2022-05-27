@@ -23,7 +23,11 @@ public class TestGrpcServer implements Closeable {
                             ServerCall<ReqT, RespT> call,
                             Metadata headers,
                             ServerCallHandler<ReqT, RespT> next) {
-                        // TODO: inject headers/trailers
+                        // Set response headers to match request headers on EchoService/Echo
+                        if (call.getMethodDescriptor().getFullMethodName()
+                                .equals(EchoServiceGrpc.getEchoMethod().getFullMethodName())) {
+                            return next.startCall(new HeaderReflectingServerCall<>(call, headers), headers);
+                        }
                         return next.startCall(call, headers);
                     }
                 })

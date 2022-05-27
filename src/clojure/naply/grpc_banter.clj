@@ -59,10 +59,11 @@
          request
          (.callMethod (:java-client client)
                       method-descriptor
-                      (c/clj->message request message request-message-type))
+                      (c/clj->Message request message request-message-type)
+                      (c/clj->Metadata (:headers request)))
          response-message-type)
        (catch StatusRuntimeException e
-         (throw (c/statusRuntimeException->exception-info request e)))))))
+         (throw (c/StatusRuntimeException->exception-info request e)))))))
 
 (defn client
   "Creates and returns a grpc-banter client."

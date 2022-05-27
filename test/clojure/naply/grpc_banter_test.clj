@@ -251,6 +251,23 @@
                          :service "naply.grpc_banter.EchoService"}
                         {:say "HelloWorld"}))))
 
+  (testing "Successful response [headers]"
+    (let [request-headers {"test-key"           ["test-value"]
+                           "keyword"            ["keyword-value"]
+                           "list-key"           ["list-val1" "list-val2" "list-val3"]
+                           "empty-list-ignored" []}
+          expected-headers (dissoc request-headers "empty-list-ignored")
+          response-headers (-> (banter/call @test-client
+                                            {:method  "naply.grpc_banter.EchoService/Echo"
+                                             :headers {"test-key"           "test-value"
+                                                       :keyword             "keyword-value"
+                                                       "list-key"           ["list-val1" "list-val2" "list-val3"]
+                                                       "empty-list-ignored" []}}
+                                            {:say "HelloWorld"})
+                               meta
+                               :headers)]
+      (is (= expected-headers (select-keys response-headers (keys request-headers))))))
+
   (testing "Successful response [serialization / deserialization matches]"
     (is (= valid-AllFieldTypesMessage
            (banter/call @test-client

@@ -5,32 +5,28 @@ import io.grpc.*;
 public final class ServerMetadataInterceptor implements ClientInterceptor {
 
     private final RpcResponse.Builder rpcResponseBuilder;
+    private final Metadata requestHeaders;
 
-    private ServerMetadataInterceptor(RpcResponse.Builder rpcResponseBuilder) {
+    public ServerMetadataInterceptor(RpcResponse.Builder rpcResponseBuilder, Metadata requestHeaders) {
         this.rpcResponseBuilder = rpcResponseBuilder;
-    }
-
-    public static ServerMetadataInterceptor create(RpcResponse.Builder rpcResponseBuilder) {
-        return new ServerMetadataInterceptor(rpcResponseBuilder);
+        this.requestHeaders = requestHeaders;
     }
 
     @Override
     public <ReqT, RespT> ClientCall<ReqT, RespT> interceptCall(MethodDescriptor<ReqT, RespT> method, CallOptions callOptions, Channel next) {
-        return new MetadataCapturingClientCall<>(rpcResponseBuilder, next.newCall(method, callOptions));
+        return new MetadataCapturingClientCall<>(next.newCall(method, callOptions));
     }
 
-    private static final class MetadataCapturingClientCall<ReqT, RespT>
+    private final class MetadataCapturingClientCall<ReqT, RespT>
             extends ForwardingClientCall.SimpleForwardingClientCall<ReqT, RespT> {
 
-        private final RpcResponse.Builder rpcResponseBuilder;
-
-        private MetadataCapturingClientCall(RpcResponse.Builder rpcResponseBuilder, ClientCall<ReqT, RespT> delegate) {
+        private MetadataCapturingClientCall(ClientCall<ReqT, RespT> delegate) {
             super(delegate);
-            this.rpcResponseBuilder = rpcResponseBuilder;
         }
 
         @Override
         public void start(Listener<RespT> responseListener, Metadata headers) {
+            headers.merge(requestHeaders);
             super.start(new MetadataCapturingClientCallListener(responseListener), headers);
         }
 
