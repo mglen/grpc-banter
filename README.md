@@ -53,9 +53,11 @@ Headers can be included with the request:
 ```clojure
 (banter/call client
   {:method "grpc_banter.EchoService/Echo"
-   :headers {"text-key" "text value"
+   :headers {"text-key" "ascii text value"
              :keyword-key ["multiple values"
-                           "can be passed as an iterable"]}}
+                           "can be passed as an iterable"]
+             ;; Binary headers must be suffixed with "-bin"
+             "key-bin" (byte-array [(byte 0x63) (byte 0x6c) (byte 0x6a)])}}
   {:say "Headers example"})
 ```
 

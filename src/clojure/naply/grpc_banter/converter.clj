@@ -15,7 +15,7 @@
 (declare clj->Message)
 
 (defn clj->Metadata [metadata]
-  (MessageConverter/cljToAsciiMetadata metadata))
+  (MessageConverter/cljToMetadata metadata))
 
 (defn Status->clj
   [^Status status]
@@ -99,8 +99,8 @@
     (with-meta
       message
       (merge (Status->clj raw-status)
-             {:headers (MessageConverter/asciiMetadataToClj raw-headers)
-              :trailers (MessageConverter/asciiMetadataToClj raw-trailers)}
+             {:headers (MessageConverter/metadataToClj raw-headers)
+              :trailers (MessageConverter/metadataToClj raw-trailers)}
              (when (:include-raw-types config)
                {:raw-message raw-message
                 :raw-headers raw-headers
@@ -229,7 +229,7 @@
                           code description)
         error-map (merge
                     status
-                    {:trailers (MessageConverter/asciiMetadataToClj raw-trailers)}
+                    {:trailers (MessageConverter/metadataToClj raw-trailers)}
                     (when (:include-raw-types config)
                       {:raw-status raw-status
                        :raw-trailers raw-trailers}))]

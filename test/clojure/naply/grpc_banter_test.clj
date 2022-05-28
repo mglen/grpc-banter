@@ -252,21 +252,27 @@
                         {:say "HelloWorld"}))))
 
   (testing "Successful response [headers]"
-    (let [request-headers {"test-key"           ["test-value"]
-                           "keyword"            ["keyword-value"]
+    (let [request-headers {"test-key"           "test-value"
+                           :keyword             "keyword-value"
                            "list-key"           ["list-val1" "list-val2" "list-val3"]
+                           "binary-bin"         (byte-array [(byte 0x63) (byte 0x6c) (byte 0x6a)])
                            "empty-list-ignored" []}
-          expected-headers (dissoc request-headers "empty-list-ignored")
+          expected-headers {"test-key"   ["test-value"]
+                            "keyword"    ["keyword-value"]
+                            "list-key"   ["list-val1" "list-val2" "list-val3"]
+                            "binary-bin" [[(byte 0x63) (byte 0x6c) (byte 0x6a)]]}
           response-headers (-> (banter/call @test-client
                                             {:method  "naply.grpc_banter.EchoService/Echo"
-                                             :headers {"test-key"           "test-value"
-                                                       :keyword             "keyword-value"
-                                                       "list-key"           ["list-val1" "list-val2" "list-val3"]
-                                                       "empty-list-ignored" []}}
+                                             :headers request-headers}
                                             {:say "HelloWorld"})
                                meta
                                :headers)]
-      (is (= expected-headers (select-keys response-headers (keys request-headers))))))
+      (is (= expected-headers
+             (-> response-headers
+                 ;; Response headers will have extra values, filter keys to only the request headers
+                 (select-keys (map #(if (keyword? %) (name %) %) (keys request-headers)))
+                 ;; Make the byte-array a vec so that values will be compared instead the array compared by identity
+                 (update "binary-bin" #(mapv vec %)))))))
 
   (testing "Successful response [serialization / deserialization matches]"
     (is (= valid-AllFieldTypesMessage

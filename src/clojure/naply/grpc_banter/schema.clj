@@ -26,7 +26,7 @@
                  [:map {:closed true}
                   [:headers {:default {}} [:map-of
                                            [:or :keyword :string]
-                                           [:or :string [:* :string]]]]])]
+                                           [:or :string [:* :string] bytes? [:* bytes?]]]]])]
     [:multi {:dispatch #(contains? % :service)}
      [false (mu/merge common
               [:map {:closed true}
