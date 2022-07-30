@@ -56,7 +56,7 @@
          request))
 
 
-(declare message-schema)
+(declare create-message-schema)
 
 (def custom-errors
   ;; TODO, error message with protobuf schema info
@@ -68,47 +68,47 @@
                {:error/fn (fn [{:keys [value schema] :as wah} _]
                             (str "value " value " has wrong type for schema " schema))})))
 
-(defn field-type-schema
+(defn create-type-schema
   "Provides the malli schema for the field type of a given protobuf field"
   [config ^Descriptors$FieldDescriptor f-desc]
   (case (.name (.getJavaType f-desc))
-        "INT" [:int {:min Integer/MIN_VALUE :max Integer/MAX_VALUE}]
-        "LONG" [:int {:min Long/MIN_VALUE :max Long/MAX_VALUE}]
-        "FLOAT" float?
-        "DOUBLE" [:or float? :double]
-        "BOOLEAN" :boolean
-        "STRING" :string
-        "BYTE_STRING" [:fn
+    "INT" [:int {:min Integer/MIN_VALUE :max Integer/MAX_VALUE}]
+    "LONG" [:int {:min Long/MIN_VALUE :max Long/MAX_VALUE}]
+    "FLOAT" float?
+    "DOUBLE" [:or float? :double]
+    "BOOLEAN" :boolean
+    "STRING" :string
+    "BYTE_STRING" [:fn
                        {:error/message "Should be a ByteString or byte[] array"}
                        #(or (instance? ByteString %) (bytes? %))]
-        "ENUM"  (let [enum-values (.getValues (.getEnumType f-desc))]
+    "ENUM" (let [enum-values (.getValues (.getEnumType f-desc))]
                   [:or (into [:enum] (map #(.getName %) enum-values)) ;; value as string
                        (into [:enum] (map #(.getNumber %) enum-values)) ;; value s as field number
                        (into [:enum] (map #(keyword (.getName %)) enum-values))]) ;; value as keyword
-        "MESSAGE" (message-schema config (.getMessageType f-desc))))
+    "MESSAGE" (create-message-schema config (.getMessageType f-desc))))
 
-(defn field-schema
+(defn create-field-schema
   "Provides the malli schema for a protobuf message field"
   [config ^Descriptors$FieldDescriptor f-desc]
   (cond
     (.isRepeated f-desc)
-    [(.getName f-desc) [:sequential (field-type-schema config f-desc)]]
+    [(.getName f-desc) [:sequential (create-type-schema config f-desc)]]
 
     (and (.isOptional f-desc)
          (not (:optional-fields-required config)))
-    [(.getName f-desc) {:optional true} (field-type-schema config f-desc)]
+    [(.getName f-desc) {:optional true} (create-type-schema config f-desc)]
 
     :else
-    [(.getName f-desc) (field-type-schema config f-desc)]))
+    [(.getName f-desc) (create-type-schema config f-desc)]))
 
 
-(defn message-schema [config ^Descriptors$Descriptor descriptor]
+(defn create-message-schema [config ^Descriptors$Descriptor descriptor]
   (into [:map {:closed true}]
-        (map #(field-schema config %)
+        (map #(create-field-schema config %)
              (.getFields descriptor))))
 
 (defn validate [^Descriptors$Descriptor descriptor config proto]
-  (let [Schema (message-schema config descriptor)]
+  (let [Schema (create-message-schema config descriptor)]
     (me/humanize
       (m/explain Schema
                  (m/decode Schema proto
@@ -124,5 +124,5 @@
     (def nested-msg (.findMessageTypeByFullName fdr "io.naply.runtime_grpc.NestedMessage"))
     (require '[malli.core :as m])
     (require '[malli.generator :as mg])
-    (mg/generate (message-schema {} msg))
-    (mg/generate (message-schema {} nested-msg))))
+    (mg/generate (create-message-schema {} msg))
+    (mg/generate (create-message-schema {} nested-msg))))

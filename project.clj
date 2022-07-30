@@ -1,5 +1,4 @@
-(def proto-version "3.19.2") ;; protobuf version -- should be used when declaring protobuf dependencies
-(def grpc-version "1.45.0")  ;; gRPC version -- should be used when declaring gRPC dependencies
+(def grpc-version "1.45.0")
 
 (defproject io.naply/grpc-banter "0.2.1-SNAPSHOT"
   :description "A runtime Clojure gRPC client"
@@ -37,7 +36,7 @@
                    [nrepl/nrepl "0.9.0"]]}}
 
   :lein-protodeps {:output-path   "target/test-gen"
-                   :proto-version ~proto-version
+                   :proto-version "3.19.2"
                    :grpc-version  ~grpc-version
                    :compile-grpc? true
                    :repos {:foo {:repo-type :filesystem

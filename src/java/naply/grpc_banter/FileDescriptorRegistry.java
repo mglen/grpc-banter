@@ -54,7 +54,7 @@ public class FileDescriptorRegistry {
     public static FileDescriptorRegistry fromFileDescriptorSet(String fileName) {
         File file = new File(fileName);
         DescriptorProtos.FileDescriptorSet fds;
-        try (FileInputStream stream = new FileInputStream(file)){
+        try (FileInputStream stream = new FileInputStream(file)) {
             fds = DescriptorProtos.FileDescriptorSet.parseFrom(stream);
         } catch (IOException e) {
             throw new RuntimeException(String.format("Could not read=[%s]", file.getAbsoluteFile()), e);
@@ -106,7 +106,7 @@ public class FileDescriptorRegistry {
                         .flatMap(FileDescriptorRegistry::getNestedMessageTypes)
         );
     }
-    
+
     private static Map<String, Descriptors.FileDescriptor> buildFileDescriptors(DescriptorProtos.FileDescriptorSet fds) {
         HashMap<String, Descriptors.FileDescriptor> result = new HashMap<>();
         int lastSize = 0;

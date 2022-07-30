@@ -77,8 +77,13 @@
 
 (comment
 
-  (def test-client (partial call (client "target/file_descriptor_set.dsc" "localhost:8082")))
-  (def response (test-client "runtime_grpc.HelloService"
-                             "SayHello"
-                             {:greeting {:message "foo" :requiredMessage "bar"}})))
+  (def test-client
+    (client {:target "localhost:8006"
+             :file-descriptor-set "target/test-file-descriptor-set.dsc"}))
+
+  (methods test-client)
+
+  (call test-client "naply.grpc_banter.EchoService/Echo" {:say "HelloWorld"})
+
+  )
 

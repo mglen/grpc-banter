@@ -66,7 +66,7 @@ public class MessageConverter {
         } else {
             throw new RuntimeException(String.format(
                     "Header key must be a String or Keyword but was class=[%s] value=[%s]",
-                    cljKey.getClass(),
+                    cljKey == null ? null : cljKey.getClass(),
                     cljKey));
         }
     }
