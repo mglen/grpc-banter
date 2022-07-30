@@ -60,7 +60,8 @@
          (.callMethod (:java-client client)
                       method-descriptor
                       (c/clj->Message request message request-message-type)
-                      (c/clj->Metadata (:headers request)))
+                      (c/clj->Metadata (:headers request))
+                      (:deadline-millis request))
          response-message-type)
        (catch StatusRuntimeException e
          (throw (c/StatusRuntimeException->exception-info request e)))))))

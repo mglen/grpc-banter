@@ -105,6 +105,8 @@ Client configuration options:
      ;; Required, must be a resolvable path to a file descriptor set.
      ;; The file descriptor set must be self-contained, use the --include_imports protoc option.
      :file-descriptor-set "/tmp/echo-service.dsc"
+     ;; Default 30 seconds, the deadline in milliseconds for requests made to the target.
+     :deadline-millis 30000
      ;; Default true, return enums in response objects as keywords for the enum name.
      ;; If false, enum fields will contain the enum number value.  
      :enums-as-keywords true
@@ -123,6 +125,7 @@ Certain configuration options can also be supplied at request time:
 ```clojure
 (banter/call client
              {:method "grpc_banter.EchoService/Echo"
+              :deadline-millis 5000
               :enums-as-keywords true
               :response-fields-as-keywords true
               :include-raw-types false

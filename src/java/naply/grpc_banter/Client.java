@@ -11,6 +11,7 @@ import naply.grpc_banter.internal.ServerMetadataInterceptor;
 
 import java.io.Closeable;
 import java.io.InputStream;
+import java.util.concurrent.TimeUnit;
 
 public class Client implements Closeable {
 
@@ -30,16 +31,21 @@ public class Client implements Closeable {
     public RpcResponse callMethod(
             Descriptors.MethodDescriptor methodDescriptor,
             DynamicMessage message,
-            Metadata headers)
+            Metadata headers,
+            long deadlineMilliseconds)
             throws StatusRuntimeException {
         MethodDescriptor<DynamicMessage, DynamicMessage> grpcMethodDescriptor = grpcMethodDescriptor(methodDescriptor);
         if (MethodDescriptor.MethodType.UNARY.equals(grpcMethodDescriptor.getType())) {
             RpcResponse.Builder responseBuilder = RpcResponse.builder();
-            Channel finalChannel = ClientInterceptors.intercept(channel, new ServerMetadataInterceptor(responseBuilder, headers));
+            Channel finalChannel = ClientInterceptors.intercept(
+                    channel,
+                    new ServerMetadataInterceptor(responseBuilder, headers));
+            CallOptions callOptions = CallOptions.DEFAULT
+                    .withDeadlineAfter(deadlineMilliseconds, TimeUnit.MILLISECONDS);
             DynamicMessage responseMessage = ClientCalls.blockingUnaryCall(
                     finalChannel,
                     grpcMethodDescriptor,
-                    CallOptions.DEFAULT,
+                    callOptions,
                     message);
             return responseBuilder.message(responseMessage).build();
         } else {

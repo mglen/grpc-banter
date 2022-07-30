@@ -6,8 +6,9 @@
   (:import (com.google.protobuf Descriptors$Descriptor
                                 Descriptors$FieldDescriptor ByteString)))
 
-(def ConverterConfigSchema
+(def RequestConfigSchema
   [:map {:closed true}
+   [:deadline-millis [:int {:min 1 :default 30000}]]
    [:enums-as-keywords [:boolean {:default true}]]
    [:response-fields-as-keywords [:boolean {:default true}]]
    [:include-raw-types [:boolean {:default false}]]
@@ -15,14 +16,14 @@
 
 (def ClientConfigSchema
   (mu/merge
-    ConverterConfigSchema
+    RequestConfigSchema
     [:map {:closed true}
      [:target :string]
      [:file-descriptor-set :string]]))
 
 (def RequestSchema
   (let [common (mu/merge
-                 ConverterConfigSchema
+                 RequestConfigSchema
                  [:map {:closed true}
                   [:headers {:default {}} [:map-of
                                            [:or :keyword :string]
@@ -51,7 +52,7 @@
   ;; Ignoring output with defaults, we only want to validate
   (decode-config RequestSchema request)
   ;; Apply client config, with request config overriding values
-  (merge (m/decode ConverterConfigSchema client-config mt/strip-extra-keys-transformer)
+  (merge (m/decode RequestConfigSchema client-config mt/strip-extra-keys-transformer)
          request))
 
 
