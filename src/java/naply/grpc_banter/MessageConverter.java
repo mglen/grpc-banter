@@ -1,7 +1,6 @@
 package naply.grpc_banter;
 
 import clojure.lang.*;
-import com.google.protobuf.DescriptorProtos;
 import io.grpc.Metadata;
 import javax.annotation.Nullable;
 import java.util.Map;

@@ -14,7 +14,7 @@
    [io.grpc/grpc-stub ~grpc-version]
    [org.slf4j/slf4j-api "1.7.32"]
    [javax.annotation/javax.annotation-api "1.3.2"]
-   [metosin/malli "0.8.4"]]
+   [metosin/malli "0.13.0"]]
 
   :source-paths ["src/clojure"]
   :java-source-paths ["src/java"]
@@ -28,12 +28,13 @@
   {:test
    {:dependencies [[com.gfredericks/test.chuck "0.2.13"]]
     :java-source-paths ["src/java" "test/java" "target/test-gen"]
-    :resource-paths ["test/resources"]
     :repl-options {:init-ns naply.grpc-banter-test}}
 
    :dev
    {:dependencies [[ch.qos.logback/logback-classic "1.2.6"]
-                   [nrepl/nrepl "0.9.0"]]}}
+                   [lambdaisland/kaocha "1.66.1034"]
+                   [nrepl/nrepl "0.9.0"]]
+    :resource-paths ["test/resources"]}}
 
   :lein-protodeps {:output-path   "target/test-gen"
                    :proto-version "3.19.2"
@@ -44,6 +45,7 @@
                                  :proto-paths ["protos"]
                                  :dependencies [protos]}}}
 
+  :aliases {"kaocha" ["run" "-m" "kaocha.runner"]}
   ; TODO: Cannot 'clean' until there is a programmatic solution to compiling the file descriptor set
   ;:aliases {"build" ["do" "clean" ["protodeps" "generate"] "test"]}
 

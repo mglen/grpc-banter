@@ -1,16 +1,18 @@
 # gRPC Banter
 
-A runtime Clojure gRPC client.
+A Clojure gRPC client usable completely at runtime, targeting exploration and REPL-driven development.
 
 **Status:** alpha
 
-A gRPC client that takes a file descriptor set to determine the rpc methods available from
-a service. Features include request validation and type coercion.
+This client takes in a file descriptor set (Sometimes called a protoset) to determine the rpc methods
+available from a gRPC service. Much like gRPC Server Reflection, this allows request and response schemas
+to be determined at runtime.
 
-This started as a personal project in order to give myself a better experience interacting with
-gRPC services from a repl environment. The focus of this library is on validation, human-readable
-errors, and simple types. I cannot recommend it for services where performance and data integrity
-are highly important.
+Request and response objects use native Clojure data types, using type coercion and validation rules to ensure
+requests conform. This library is built on `io.grpc`, ensuring only valid payloads are sent to the server.
+
+Primary use-cases of this library are for debugging and interactive development. Please consider the performance
+tradeoffs before using for production workloads.
 
 ## Usage
 
@@ -61,15 +63,16 @@ Headers can be included with the request:
   {:say "Headers example"})
 ```
 
-List all found service methods:
+To list all methods found in the file descriptor set:
 ```clojure
 (banter/methods client)
 ; => #{"grpc_banter.EchoService/Echo"
 ;      "grpc_banter.EchoService/Error"}
 ```
 
-The protobuf source for all examples is:
+The protobuf source for all above examples is:
 ```protobuf
+syntax = "proto2";
 package grpc_banter;
 
 service EchoService {
@@ -80,15 +83,12 @@ service EchoService {
 message EchoRequest {
   required string say = 1;
 }
-
 message EchoResponse {
   required string echo = 1;
 }
-
 message ErrorRequest {
   optional string unused = 1;
 }
-
 message ErrorResponse {
   optional string unused = 1;
 }
@@ -100,7 +100,7 @@ Client configuration options:
 ```clojure
 (def client
   (banter/client
-    {;; Required, must be a NameResolver-compliant URI, ex: localhost:8080
+    {;; Required, must be a NameResolver compliant URI, ex: localhost:8080
      :target "localhost:8080"
      ;; Required, must be a resolvable path to a file descriptor set.
      ;; The file descriptor set must be self-contained, use the --include_imports protoc option.
@@ -160,7 +160,6 @@ Fields can be specified by name as either strings or keywords, or by the field n
 
 Numeric values will be coerced to their correct type as long as the number fits
 within its bounds, but `int*` values must be either `Integer` or `Long`.
-
 ```clojure
 ;; Valid
 {:float 1.5}
@@ -190,14 +189,18 @@ Repeatable items can be any non-lazy sequence:
 ```
 
 Booleans must be expressed as their correct type:
-
 ```clojure
 {:boolean true}
 {:boolean false}
 ```
 
-Nested messages can either be a map or the java type:
+Bytes can either be a java `byte[]` array or the protobuf `ByteString` class:
+```clojure
+{:bytes (byte-array [(byte 0x63) (byte 0x6C) (byte 0x6A)])}
+{:bytes (com.google.protobuf.ByteString/copyFromUtf8 "clj")}
+```
 
+Nested messages can either be a map or the java type:
 ```clojure
 {:nested-message {:field "value"}}
 {:nested-message ^Message msg}
@@ -209,3 +212,19 @@ Some protobuf features are not supported:
 * Protobuf Extensions and `extend`.
 * OneOf (`oneof`) fields.
 * Groups (`group`) - This is officially deprecated in proto2 and removed from proto3.
+
+Certain gRPC features are either not exposed or supported, including:
+* Streaming requests or responses (non-unary)
+* Cancelling or terminating a request
+* Configuring compression
+
+Please open an issue on github if you want to see support for any missing features. External contributions are welcome!
+
+## Alpha Status
+
+* Add proto3 test coverage.
+* Update validation responses to include detailed protobuf type information.
+* Support gRPC [server reflection](https://github.com/grpc/grpc/blob/master/doc/server-reflection.md).
+* Separate validator and DynamicMessage generation from client, so its more of an A->B->C flow.
+* Support passing a target or a channel. Have some internal cache of channel based on target.
+* Close the channel on connection failure, by default it will retry forever in a background thread.

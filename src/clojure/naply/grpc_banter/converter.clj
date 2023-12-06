@@ -1,11 +1,13 @@
 (ns naply.grpc-banter.converter
-  (:import (com.google.protobuf Message Descriptors$FieldDescriptor
-                                Descriptors$Descriptor
-                                DynamicMessage
-                                ByteString
-                                Internal$EnumLite
-                                MessageLite
-                                Descriptors$EnumValueDescriptor)
+  (:import (com.google.protobuf
+             ByteString
+             Descriptors$Descriptor
+             Descriptors$EnumValueDescriptor
+             Descriptors$FieldDescriptor
+             DynamicMessage
+             Internal$EnumLite
+             Message
+             MessageLite)
            (java.util Map)
            (io.grpc StatusRuntimeException Status)
            (naply.grpc_banter MessageConverter)
@@ -22,7 +24,7 @@
   {:status {:code (-> status .getCode .name)
             :description (.getDescription status)}})
 
-(defn field-mapper [config ^Descriptors$FieldDescriptor field-desc]
+(defn parser-for-field [config ^Descriptors$FieldDescriptor field-desc]
   (case (.name (.getJavaType field-desc))
     ;; Directly convert primitive types
     ("INT" "LONG" "FLOAT" "DOUBLE" "STRING" "BOOLEAN" "BYTE_STRING")
@@ -38,7 +40,7 @@
     "MESSAGE"
     (fn [^Message msg] (Message->clj config msg (.getDescriptorForType msg)))
 
-    (throw (RuntimeException. (str "Unsupported field type" (.getJavaType field-desc))))))
+    (throw (RuntimeException. (str "Unsupported field type=[" (.getJavaType field-desc) "]")))))
 
 (defn field-name [config f-desc]
   (if (:response-fields-as-keywords config)
@@ -51,17 +53,15 @@
   [config
    ^Message message
    ^Descriptors$FieldDescriptor f-desc]
-  (let [f (field-mapper config f-desc)]
+  (let [parse-fn (parser-for-field config f-desc)]
     (cond
+      (.isRequired f-desc) (parse-fn (.getField message f-desc))
       (.isOptional f-desc) (when (.hasField message f-desc)
-                             (f (.getField message f-desc)))
-      (.isRequired f-desc) (f (.getField message f-desc))
-      (.isRepeated f-desc) (mapv f (.getField message f-desc))
+                             (parse-fn (.getField message f-desc)))
+      (.isRepeated f-desc) (mapv parse-fn (.getField message f-desc))
       :else (throw (RuntimeException.
-                     (format "Found field=[%s] label=[%s] that is neither optional,required,repeated"
-                             (.getFullName f-desc)
-                             (-> f-desc .toProto .getLabel)))))))
-
+                     (format "Found field=[%s] label=[%s] that is neither optional, required, repeated."
+                             (.getFullName f-desc) (-> f-desc .toProto .getLabel)))))))
 
 (defn Message->clj
   "Convert a Protobuf message to a clojure map of fields and values."
@@ -134,7 +134,7 @@
           (case java-type
             "INT"
             (cond
-              (instance? Long field-value) (.intValue field-value)
+              (instance? Long field-value) (Math/toIntExact field-value)
               (instance? Integer field-value) field-value)
 
             "LONG"
@@ -179,7 +179,7 @@
                             field-value
                             (.getMessageType f-desc))
               (instance? MessageLite field-value) field-value)
-            ;; Catchall
+
             (throw (RuntimeException.
                      (format "Unsupported field type [%s]" java-type))))]
       (when-not (some? value)
@@ -192,9 +192,8 @@
       value)))
 
 
-(defn clj->field [config
-                  message-map
-                  ^Descriptors$FieldDescriptor f-desc]
+(defn clj->field
+  [config message-map ^Descriptors$FieldDescriptor f-desc]
   (cond
     (.isRepeated f-desc)
     (mapv #(clj->field-value config % f-desc) (get-field-value message-map f-desc))

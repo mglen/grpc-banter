@@ -44,8 +44,9 @@
   as a map of fields and values. Headers, trailers, and status are included
   as metadata. Errors are returned as runtime exceptions."
   ([client request message]
-   (let [request (if (string? request) {:method request} request)
-         request (s/decode-request request (:config client))
+   (let [request (s/decode-request
+                   (if (string? request) {:method request} request)
+                   (:config client))
          method-descriptor (get-method-descriptor client request)
          request-message-type (.getInputType method-descriptor)
          response-message-type (.getOutputType method-descriptor)]

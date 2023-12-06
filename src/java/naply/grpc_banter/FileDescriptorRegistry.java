@@ -110,8 +110,8 @@ public class FileDescriptorRegistry {
     private static Map<String, Descriptors.FileDescriptor> buildFileDescriptors(DescriptorProtos.FileDescriptorSet fds) {
         HashMap<String, Descriptors.FileDescriptor> result = new HashMap<>();
         int lastSize = 0;
-        // Loop over FileDescriptorProtos until all are resolved w/ dependencies
-        // TODO: optimize by building a DAG
+        // Repeatedly loop over FileDescriptorProtos until all are resolved with their dependencies.
+        // Resolution could be optimized and give better errors by building a graph.
         while (result.size() < fds.getFileList().size()) {
             for (DescriptorProtos.FileDescriptorProto fdp : fds.getFileList()) {
                 // Skip if already resolved
@@ -127,15 +127,18 @@ public class FileDescriptorRegistry {
                     try {
                         fileDescriptor = Descriptors.FileDescriptor.buildFrom(fdp, dependencies);
                     } catch (Descriptors.DescriptorValidationException e) {
-                        // TODO more informative error
-                        throw new RuntimeException("Validation error!", e);
+                        throw new RuntimeException(
+                                String.format("Unrecoverable error processing FileDescriptor=[%s]", fdp.getName()),
+                                e);
                     }
                     log.debug("Resolved FileDescriptor=[{}] with dependencies=[{}]", fdp.getName(), dependencyList);
                     result.put(fdp.getName(), fileDescriptor);
                 }
             }
             if (lastSize == result.size()) {
-                throw new RuntimeException("Deadlock detected");
+                // This should theoretically never happen, and would indicate a circular dependency between protobuf
+                // files. The protoc compiler should have caught this and never built the FileDescriptorSet.
+                throw new RuntimeException("Deadlock resolving protobuf file descriptors");
             }
             lastSize = result.size();
         }
@@ -149,7 +152,7 @@ public class FileDescriptorRegistry {
     }
 
     public String toString() {
-        return "FileDescriptorSet{services=" +
+        return "FileDescriptorRegistry{services=" +
                 serviceDescriptorsByFullName.keySet() +
                 " messageTypes=" +
                 messageTypesByFullName.keySet() +

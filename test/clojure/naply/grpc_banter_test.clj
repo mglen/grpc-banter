@@ -301,8 +301,8 @@
           ExceptionInfo
           (as-pattern "Request message failed validation")
           (banter/call @test-client
-                       "naply.grpc_banter.EchoService/Error"
-                       {:badfield "Gonna fail"}))))
+                       "naply.grpc_banter.EchoService/Echo"
+                       {:nay "Gonna fail"}))))
 
   (testing "Error response [request validation]"
     (is (thrown-with-msg?

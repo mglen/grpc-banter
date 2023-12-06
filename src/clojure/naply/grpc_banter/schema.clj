@@ -37,6 +37,10 @@
                [:method :string]
                [:service :string]])]]))
 
+(def custom-errors
+  (-> me/default-errors
+      (assoc ::m/missing-key
+             {:error/fn (fn [_err _] (str "field is required"))})))
 
 (defn- decode-config
   "Return the configuration with defaults applied. Throw if the config does not conform."
@@ -48,6 +52,7 @@
     config))
 
 (def decode-client-config (partial decode-config ClientConfigSchema))
+
 (defn decode-request [request client-config]
   ;; Ignoring output with defaults, we only want to validate
   (decode-config RequestSchema request)
@@ -55,18 +60,7 @@
   (merge (m/decode RequestConfigSchema client-config mt/strip-extra-keys-transformer)
          request))
 
-
 (declare create-message-schema)
-
-(def custom-errors
-  ;; TODO, error message with protobuf schema info
-  (-> me/default-errors
-      (assoc ::m/missing-key
-             {:error/fn (fn [_err _] (str "field is required"))})
-      ;; TODO: print type of parent value, check for toString. Walk stack to check how its rendering schema
-      #_(assoc ::m/invalid-type
-               {:error/fn (fn [{:keys [value schema] :as wah} _]
-                            (str "value " value " has wrong type for schema " schema))})))
 
 (defn create-type-schema
   "Provides the malli schema for the field type of a given protobuf field"
@@ -101,28 +95,17 @@
     :else
     [(.getName f-desc) (create-type-schema config f-desc)]))
 
-
 (defn create-message-schema [config ^Descriptors$Descriptor descriptor]
   (into [:map {:closed true}]
         (map #(create-field-schema config %)
              (.getFields descriptor))))
 
 (defn validate [^Descriptors$Descriptor descriptor config proto]
-  (let [Schema (create-message-schema config descriptor)]
+  (let [Schema (create-message-schema config descriptor)
+        value (m/decode Schema proto
+                        ;; Turn all :keyword keys to strings
+                        (mt/key-transformer {:decode name}))]
+    (println (m/explain Schema value))
     (me/humanize
-      (m/explain Schema
-                 (m/decode Schema proto
-                           ;; Turn all :keyword keys to strings
-                           (mt/key-transformer {:decode name})))
+      (m/explain Schema value)
       {:errors custom-errors})))
-
-(comment
-  (do
-    (import '(io.naply.dynamic_grpc FileDescriptorRegistry))
-    (def fdr (FileDescriptorRegistry/fromFileDescriptorSetFile "target/file_descriptor_set.dsc"))
-    (def msg (.findMessageTypeByFullName fdr "io.naply.runtime_grpc.ComplexMessage"))
-    (def nested-msg (.findMessageTypeByFullName fdr "io.naply.runtime_grpc.NestedMessage"))
-    (require '[malli.core :as m])
-    (require '[malli.generator :as mg])
-    (mg/generate (create-message-schema {} msg))
-    (mg/generate (create-message-schema {} nested-msg))))

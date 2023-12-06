@@ -37,13 +37,13 @@ public class Client implements Closeable {
         MethodDescriptor<DynamicMessage, DynamicMessage> grpcMethodDescriptor = grpcMethodDescriptor(methodDescriptor);
         if (MethodDescriptor.MethodType.UNARY.equals(grpcMethodDescriptor.getType())) {
             RpcResponse.Builder responseBuilder = RpcResponse.builder();
-            Channel finalChannel = ClientInterceptors.intercept(
+            Channel metadataCollectingChannel = ClientInterceptors.intercept(
                     channel,
                     new ServerMetadataInterceptor(responseBuilder, headers));
             CallOptions callOptions = CallOptions.DEFAULT
                     .withDeadlineAfter(deadlineMilliseconds, TimeUnit.MILLISECONDS);
             DynamicMessage responseMessage = ClientCalls.blockingUnaryCall(
-                    finalChannel,
+                    metadataCollectingChannel,
                     grpcMethodDescriptor,
                     callOptions,
                     message);
@@ -76,8 +76,7 @@ public class Client implements Closeable {
                 try {
                     return parser.parseFrom(inputStream);
                 } catch (InvalidProtocolBufferException e) {
-                    // TODO, more details on exception
-                    throw new RuntimeException("Could not parse", e);
+                    throw new RuntimeException(String.format("Could not parse server response as type=[%s]", type.getFullName()), e);
                 }
 
             }
