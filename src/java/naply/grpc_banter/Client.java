@@ -9,6 +9,7 @@ import io.grpc.stub.ClientCalls;
 import naply.grpc_banter.internal.RpcResponse;
 import naply.grpc_banter.internal.ServerMetadataInterceptor;
 
+import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.InputStream;
 import java.util.concurrent.TimeUnit;
@@ -17,11 +18,16 @@ public class Client implements Closeable {
 
     private final ManagedChannel channel;
 
-    public static Client create(String target) {
-        ManagedChannel channel = ManagedChannelBuilder.forTarget(target)
-                .usePlaintext()
-                .build();
-        return new Client(channel);
+    public static Client create(String target, @Nullable Boolean useTls) {
+        ManagedChannelBuilder<?> channelBuilder = ManagedChannelBuilder.forTarget(target)
+                .directExecutor()
+                .disableRetry();
+
+        channelBuilder = Boolean.TRUE.equals(useTls)
+                ? channelBuilder.useTransportSecurity()
+                : channelBuilder.usePlaintext();
+
+        return new Client(channelBuilder.build());
     }
 
     public Client(ManagedChannel managedChannel) {
@@ -54,8 +60,10 @@ public class Client implements Closeable {
     }
 
     private static MethodDescriptor<DynamicMessage, DynamicMessage> grpcMethodDescriptor(Descriptors.MethodDescriptor methodDescriptor) {
+        if (methodDescriptor.isClientStreaming() || methodDescriptor.isServerStreaming()) {
+            throw new IllegalArgumentException("Calls for streaming methods not supported");
+        }
         return MethodDescriptor.<DynamicMessage, DynamicMessage>newBuilder()
-                // TODO, infer type from method descriptor? Should streaming be supported?
                 .setType(MethodDescriptor.MethodType.UNARY)
                 .setFullMethodName(methodDescriptor.getService().getFullName() + "/" + methodDescriptor.getName())
                 .setRequestMarshaller(buildDynamicMarshaller(methodDescriptor.getInputType()))

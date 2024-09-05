@@ -4,10 +4,12 @@
             [malli.util :as mu]
             [malli.error :as me])
   (:import (com.google.protobuf Descriptors$Descriptor
-                                Descriptors$FieldDescriptor ByteString)))
+                                Descriptors$FieldDescriptor
+                                ByteString)))
 
 (def RequestConfigSchema
   [:map {:closed true}
+   [:tls [:boolean {:default false}]]
    [:deadline-millis [:int {:min 1 :default 30000}]]
    [:enums-as-keywords [:boolean {:default true}]]
    [:response-fields-as-keywords [:boolean {:default true}]]
@@ -15,19 +17,18 @@
    [:optional-fields-required [:boolean {:default false}]]])
 
 (def ClientConfigSchema
-  (mu/merge
-    RequestConfigSchema
+  (mu/merge RequestConfigSchema
     [:map {:closed true}
      [:target :string]
      [:file-descriptor-set :string]]))
 
 (def RequestSchema
-  (let [common (mu/merge
-                 RequestConfigSchema
+  (let [common (mu/merge RequestConfigSchema
                  [:map {:closed true}
-                  [:headers {:default {}} [:map-of
-                                           [:or :keyword :string]
-                                           [:or :string [:* :string] bytes? [:* bytes?]]]]])]
+                  [:headers {:default {}}
+                   [:map-of
+                    [:or :keyword :string]
+                    [:or :string [:* :string] bytes? [:* bytes?]]]]])]
     [:multi {:dispatch #(contains? % :service)}
      [false (mu/merge common
               [:map {:closed true}
@@ -42,7 +43,7 @@
       (assoc ::m/missing-key
              {:error/fn (fn [_err _] (str "field is required"))})))
 
-(defn- decode-config
+(defn- decode
   "Return the configuration with defaults applied. Throw if the config does not conform."
   [schema config]
   (let [config (m/decode schema config mt/default-value-transformer)
@@ -51,14 +52,16 @@
       (throw (IllegalArgumentException. (str "Errors in configuration " errors))))
     config))
 
-(def decode-client-config (partial decode-config ClientConfigSchema))
+(defn decode-client-config [config]
+  (decode ClientConfigSchema config))
 
 (defn decode-request [request client-config]
-  ;; Ignoring output with defaults, we only want to validate
-  (decode-config RequestSchema request)
-  ;; Apply client config, with request config overriding values
-  (merge (m/decode RequestConfigSchema client-config mt/strip-extra-keys-transformer)
-         request))
+  ;; Strip disallowed request keys from the client config
+  (let [stripped-client-config (m/decode RequestConfigSchema
+                                         client-config
+                                         mt/strip-extra-keys-transformer)]
+    ;; Decode after merging with client defaults applied
+    (decode RequestSchema (merge stripped-client-config request))))
 
 (declare create-message-schema)
 
@@ -89,6 +92,7 @@
     [(.getName f-desc) [:sequential (create-type-schema config f-desc)]]
 
     (and (.isOptional f-desc)
+         ;; TODO treat repeated as optional?
          (not (:optional-fields-required config)))
     [(.getName f-desc) {:optional true} (create-type-schema config f-desc)]
 
@@ -105,7 +109,6 @@
         value (m/decode Schema proto
                         ;; Turn all :keyword keys to strings
                         (mt/key-transformer {:decode name}))]
-    (println (m/explain Schema value))
     (me/humanize
       (m/explain Schema value)
       {:errors custom-errors})))

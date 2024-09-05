@@ -71,7 +71,7 @@
   "Creates and returns a grpc-banter client."
   [config]
   (let [config (s/decode-client-config config)]
-    {:java-client (Client/create (:target config))
+    {:java-client (Client/create (:target config) (:use-tls config))
      :registry    (FileDescriptorRegistry/fromFileDescriptorSet
                     ^String (:file-descriptor-set config))
      :config      config}))

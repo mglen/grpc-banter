@@ -40,9 +40,8 @@ Status, headers, and trailers can be accessed from the response metadata:
 
 Failed requests will result in an exception: 
 ```clojure
-
 (try
-  (banter/call client "grpc_banter.EchoService/Error" {:unused "Will return error"})
+  (banter/call client "grpc_banter.EchoService/Error" {:msg "Will return error"})
   (catch ExceptionInfo ex
     ex))
 ; => #error {
@@ -87,11 +86,9 @@ message EchoResponse {
   required string echo = 1;
 }
 message ErrorRequest {
-  optional string unused = 1;
+  optional string msg = 1;
 }
-message ErrorResponse {
-  optional string unused = 1;
-}
+message ErrorResponse {}
 ```
 
 ### Configuration
@@ -100,11 +97,13 @@ Client configuration options:
 ```clojure
 (def client
   (banter/client
-    {;; Required, must be a NameResolver compliant URI, ex: localhost:8080
+    {;; Required, a NameResolver compliant URI, ex: localhost:8080
      :target "localhost:8080"
-     ;; Required, must be a resolvable path to a file descriptor set.
-     ;; The file descriptor set must be self-contained, use the --include_imports protoc option.
+     ;; Required, path to a file descriptor set.
+     ;; The file descriptor set must be self-contained, use the --include_imports protoc flag.
      :file-descriptor-set "/tmp/echo-service.dsc"
+     ;; Default false, whether to use a secure TLS connection.
+     :use-tls false
      ;; Default 30 seconds, the deadline in milliseconds for requests made to the target.
      :deadline-millis 30000
      ;; Default true, return enums in response objects as keywords for the enum name.
