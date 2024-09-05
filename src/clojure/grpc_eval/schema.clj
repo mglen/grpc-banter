@@ -1,10 +1,11 @@
-(ns naply.grpc-banter.schema
+(ns grpc-eval.schema
   (:require [malli.core :as m]
             [malli.transform :as mt]
             [malli.util :as mu]
             [malli.error :as me])
   (:import (com.google.protobuf Descriptors$Descriptor
                                 Descriptors$FieldDescriptor
+                                Descriptors$EnumValueDescriptor
                                 ByteString)))
 
 (def RequestConfigSchema
@@ -79,9 +80,9 @@
                        {:error/message "Should be a ByteString or byte[] array"}
                        #(or (instance? ByteString %) (bytes? %))]
     "ENUM" (let [enum-values (.getValues (.getEnumType f-desc))]
-                  [:or (into [:enum] (map #(.getName %) enum-values)) ;; value as string
-                       (into [:enum] (map #(.getNumber %) enum-values)) ;; value s as field number
-                       (into [:enum] (map #(keyword (.getName %)) enum-values))]) ;; value as keyword
+                  [:or (into [:enum] (map #(.getName ^Descriptors$EnumValueDescriptor %) enum-values)) ;; value as string
+                       (into [:enum] (map #(.getNumber ^Descriptors$EnumValueDescriptor %) enum-values)) ;; value s as field number
+                       (into [:enum] (map #(keyword (.getName ^Descriptors$EnumValueDescriptor %)) enum-values))]) ;; value as keyword
     "MESSAGE" (create-message-schema config (.getMessageType f-desc))))
 
 (defn create-field-schema

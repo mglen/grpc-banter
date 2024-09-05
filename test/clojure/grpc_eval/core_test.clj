@@ -1,8 +1,8 @@
-(ns naply.grpc-banter-test
+(ns grpc-eval.core-test
   (:refer-clojure :exclude [methods])
   (:require [clojure.test :refer :all]
-            [naply.grpc-banter :as banter])
-  (:import (naply.grpc_banter TestGrpcServer)
+            [grpc-eval.core :as grpc])
+  (:import (grpc_eval TestGrpcServer)
            (clojure.lang ExceptionInfo)
            (java.util.regex Pattern)
            (com.google.protobuf ByteString)))
@@ -53,7 +53,7 @@
 (use-fixtures
   :once (fn [test-suite]
           (with-open [server (TestGrpcServer/create 0)]
-            (reset! test-client (banter/client {:target                   (str "localhost:" (.getPort server))
+            (reset! test-client (grpc/client {:target                   (str "localhost:" (.getPort server))
                                                 :file-descriptor-set      "target/test-file-descriptor-set.dsc"
                                                 :optional-fields-required true}))
             (println "Running test server on port" (.getPort server))
@@ -62,49 +62,49 @@
 ;; Tests
 (deftest methods
   (testing "Returns all fully qualified gRPC service methods"
-    (is (= #{"naply.grpc_banter.EchoService/Echo"
-             "naply.grpc_banter.EchoService/Error"
-             "naply.grpc_banter.EchoService/AllFieldTypesTest"
-             "naply.grpc_banter.EchoService/NestedMessageTest"}
-           (banter/methods @test-client)))))
+    (is (= #{"grpc_eval.EchoService/Echo"
+             "grpc_eval.EchoService/Error"
+             "grpc_eval.EchoService/AllFieldTypesTest"
+             "grpc_eval.EchoService/NestedMessageTest"}
+           (grpc/methods @test-client)))))
 
 (deftest validate
   (testing "Validation passing"
     (are [method message]
-      (nil? (banter/validate @test-client method message))
+      (nil? (grpc/validate @test-client method message))
 
-      "naply.grpc_banter.EchoService/Echo"
+      "grpc_eval.EchoService/Echo"
       {:say "test message"}
 
-      "naply.grpc_banter.EchoService/AllFieldTypesTest"
+      "grpc_eval.EchoService/AllFieldTypesTest"
       valid-AllFieldTypesMessage
 
 
-      "naply.grpc_banter.EchoService/NestedMessageTest"
+      "grpc_eval.EchoService/NestedMessageTest"
       valid-NestedMessage))
   (testing "Validation errors"
     (are [method message error]
-      (= error (banter/validate @test-client method message))
+      (= error (grpc/validate @test-client method message))
 
       ;; Missing field
-      "naply.grpc_banter.EchoService/Echo"
+      "grpc_eval.EchoService/Echo"
       {}
       {"say" ["field is required"]}
 
       ;; Field wrong type
-      "naply.grpc_banter.EchoService/Echo"
+      "grpc_eval.EchoService/Echo"
       {:say 12345}
       {"say" ["should be a string"]}
 
       ;; Extra field
-      "naply.grpc_banter.EchoService/Echo"
+      "grpc_eval.EchoService/Echo"
       {:say "valid"
        :extra "key"}
       {"extra" ["disallowed key"]}
 
 
       ;; All field types required
-      "naply.grpc_banter.EchoService/AllFieldTypesTest"
+      "grpc_eval.EchoService/AllFieldTypesTest"
       {}
       {"string" ["field is required"]
        "integer" ["field is required"]
@@ -137,7 +137,7 @@
        "optionalMessage" ["field is required"]}
 
       ;; All field types must be correct type
-      "naply.grpc_banter.EchoService/AllFieldTypesTest"
+      "grpc_eval.EchoService/AllFieldTypesTest"
       {:string  false
        :integer false
        :long    false
@@ -202,7 +202,7 @@
        "repeatedMessage" ["invalid type"]}
 
       ;; Repeated fields - must have correct inner type
-      "naply.grpc_banter.EchoService/AllFieldTypesTest"
+      "grpc_eval.EchoService/AllFieldTypesTest"
       (merge valid-AllFieldTypesMessage
              {:repeatedString  [false]
               :repeatedInteger [false]
@@ -226,7 +226,7 @@
        "repeatedMessage" [["invalid type"]]}
       
       ;; Nested field required
-      "naply.grpc_banter.EchoService/NestedMessageTest"
+      "grpc_eval.EchoService/NestedMessageTest"
       {:outerString "foo" :inner {}}
       {"inner" {"innerString" ["field is required"]
                 "inner" ["field is required"]}})))
@@ -234,21 +234,21 @@
 (deftest call
   (testing "Successful response [method]"
     (is (= {:echo "HelloWorld"}
-           (banter/call @test-client
-                        "naply.grpc_banter.EchoService/Echo"
+           (grpc/call @test-client
+                        "grpc_eval.EchoService/Echo"
                         {:say "HelloWorld"}))))
 
   (testing "Successful response [method in map]"
     (is (= {:echo "HelloWorld"}
-           (banter/call @test-client
-                        {:method "naply.grpc_banter.EchoService/Echo"}
+           (grpc/call @test-client
+                        {:method "grpc_eval.EchoService/Echo"}
                         {:say "HelloWorld"}))))
 
   (testing "Successful response [service and method]"
     (is (= {:echo "HelloWorld"}
-           (banter/call @test-client
+           (grpc/call @test-client
                         {:method "Echo"
-                         :service "naply.grpc_banter.EchoService"}
+                         :service "grpc_eval.EchoService"}
                         {:say "HelloWorld"}))))
 
   (testing "Successful response [headers]"
@@ -261,8 +261,8 @@
                             "keyword"    ["keyword-value"]
                             "list-key"   ["list-val1" "list-val2" "list-val3"]
                             "binary-bin" [[(byte 0x63) (byte 0x6c) (byte 0x6a)]]}
-          response-headers (-> (banter/call @test-client
-                                            {:method  "naply.grpc_banter.EchoService/Echo"
+          response-headers (-> (grpc/call @test-client
+                                            {:method  "grpc_eval.EchoService/Echo"
                                              :headers request-headers}
                                             {:say "HelloWorld"})
                                meta
@@ -276,18 +276,18 @@
 
   (testing "Successful response [serialization / deserialization matches]"
     (is (= valid-AllFieldTypesMessage
-           (banter/call @test-client
-                        "naply.grpc_banter.EchoService/AllFieldTypesTest"
+           (grpc/call @test-client
+                        "grpc_eval.EchoService/AllFieldTypesTest"
                         valid-AllFieldTypesMessage)))
     (is (= valid-NestedMessage
-           (banter/call @test-client
-                        "naply.grpc_banter.EchoService/NestedMessageTest"
+           (grpc/call @test-client
+                        "grpc_eval.EchoService/NestedMessageTest"
                         valid-NestedMessage))))
 
   (testing "Error response [server exception]"
     (try
-      (let [resp (banter/call @test-client
-                              "naply.grpc_banter.EchoService/Error"
+      (let [resp (grpc/call @test-client
+                              "grpc_eval.EchoService/Error"
                               {:unused "Gonna fail"})]
         (is (not (any? resp)) (str "Expected exception but got response" resp)))
       (catch ExceptionInfo ex
@@ -300,16 +300,16 @@
     (is (thrown-with-msg?
           ExceptionInfo
           (as-pattern "Request message failed validation")
-          (banter/call @test-client
-                       "naply.grpc_banter.EchoService/Echo"
+          (grpc/call @test-client
+                       "grpc_eval.EchoService/Echo"
                        {:nay "Gonna fail"}))))
 
   (testing "Error response [request validation]"
     (is (thrown-with-msg?
           IllegalArgumentException
           (as-pattern "Errors in configuration {:badfield [\"disallowed key\"]}")
-          (banter/call @test-client
-                       {:method "naply.grpc_banter.EchoService/Echo"
+          (grpc/call @test-client
+                       {:method "grpc_eval.EchoService/Echo"
                         :badfield "does not exist"}
                        {:say "test message"})))))
 
@@ -318,11 +318,11 @@
     (is (thrown-with-msg?
           IllegalArgumentException
           (as-pattern "Errors in configuration {:file-descriptor-set [\"missing required key\"]}")
-          (banter/client {:target "localhost:NoPort"}))))
+          (grpc/client {:target "localhost:NoPort"}))))
   (testing "Client configuration error [incorrect type]"
     (is (thrown-with-msg?
           IllegalArgumentException
           (as-pattern "Errors in configuration {:optional-fields-required [\"should be a boolean\"]}")
-          (banter/client {:target "localhost:NoPort"
+          (grpc/client {:target "localhost:NoPort"
                           :file-descriptor-set "target/test-file-descriptor-set.dsc"
                           :optional-fields-required "true"})))))

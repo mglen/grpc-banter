@@ -1,13 +1,13 @@
-package naply.grpc_banter;
+package grpc_eval;
 
 import com.google.protobuf.Descriptors;
 import com.google.protobuf.DynamicMessage;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.Parser;
+import grpc_eval.internal.RpcResponse;
+import grpc_eval.internal.ServerMetadataInterceptor;
 import io.grpc.*;
 import io.grpc.stub.ClientCalls;
-import naply.grpc_banter.internal.RpcResponse;
-import naply.grpc_banter.internal.ServerMetadataInterceptor;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;

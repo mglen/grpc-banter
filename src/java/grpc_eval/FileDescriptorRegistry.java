@@ -1,4 +1,4 @@
-package naply.grpc_banter;
+package grpc_eval;
 
 import com.google.protobuf.DescriptorProtos;
 import com.google.protobuf.Descriptors;

@@ -1,4 +1,4 @@
-# gRPC Banter
+# gRPC Eval
 
 A Clojure gRPC client usable completely at runtime, targeting exploration and REPL-driven development.
 
@@ -17,14 +17,15 @@ tradeoffs before using for production workloads.
 ## Usage
 
 Basic rpc call example:
+
 ```clojure
-(require '[naply.grpc-banter :as banter])
+(require '[grpc-eval.core :as grpc])
 
 (def client
-  (banter/client {:target "localhost:8080"
-                  :file-descriptor-set "/tmp/echo-service.dsc"}))
+  (grpc/client {:target "localhost:8080"
+                :file-descriptor-set "/tmp/echo-service.dsc"}))
 
-(banter/call client "grpc_banter.EchoService/Echo" {:say "HelloWorld"})
+(grpc/call client "grpc_eval.EchoService/Echo" {:say "HelloWorld"})
 ; => {:echo "HelloWorld"}
 ```
 
@@ -41,7 +42,7 @@ Status, headers, and trailers can be accessed from the response metadata:
 Failed requests will result in an exception: 
 ```clojure
 (try
-  (banter/call client "grpc_banter.EchoService/Error" {:msg "Will return error"})
+  (grpc/call client "grpc_eval.EchoService/Error" {:msg "Will return error"})
   (catch ExceptionInfo ex
     ex))
 ; => #error {
@@ -52,8 +53,8 @@ Failed requests will result in an exception:
 
 Headers can be included with the request:
 ```clojure
-(banter/call client
-  {:method "grpc_banter.EchoService/Echo"
+(grpc/call client
+  {:method "grpc_eval.EchoService/Echo"
    :headers {"text-key" "ascii text value"
              :keyword-key ["multiple values"
                            "can be passed as an iterable"]
@@ -64,15 +65,15 @@ Headers can be included with the request:
 
 To list all methods found in the file descriptor set:
 ```clojure
-(banter/methods client)
-; => #{"grpc_banter.EchoService/Echo"
-;      "grpc_banter.EchoService/Error"}
+(grpc/methods client)
+; => #{"grpc_eval.EchoService/Echo"
+;      "grpc_eval.EchoService/Error"}
 ```
 
 The protobuf source for all above examples is:
 ```protobuf
 syntax = "proto2";
-package grpc_banter;
+package grpc_eval;
 
 service EchoService {
   rpc Echo (EchoRequest) returns (EchoResponse);
@@ -96,7 +97,7 @@ message ErrorResponse {}
 Client configuration options:
 ```clojure
 (def client
-  (banter/client
+  (grpc/client
     {;; Required, a NameResolver compliant URI, ex: localhost:8080
      :target "localhost:8080"
      ;; Required, path to a file descriptor set.
@@ -122,14 +123,14 @@ Client configuration options:
 ```
 Certain configuration options can also be supplied at request time:
 ```clojure
-(banter/call client
-             {:method "grpc_banter.EchoService/Echo"
-              :deadline-millis 5000
-              :enums-as-keywords true
-              :response-fields-as-keywords true
-              :include-raw-types false
-              :optional-fields-required false}
-             {:say "Example with configuration"})
+(grpc/call client
+           {:method "grpc_eval.EchoService/Echo"
+            :deadline-millis 5000
+            :enums-as-keywords true
+            :response-fields-as-keywords true
+            :include-raw-types false
+            :optional-fields-required false}
+           {:say "Example with configuration"})
 ```
 
 ## Development

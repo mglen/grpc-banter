@@ -1,8 +1,8 @@
 (def grpc-version "1.45.0")
 
-(defproject io.naply/grpc-banter "0.2.1-SNAPSHOT"
+(defproject grpc-eval/grpc-eval "0.3.1-SNAPSHOT"
   :description "A runtime Clojure gRPC client"
-  :url "https://github.com/mglen/grpc-banter"
+  :url "https://github.com/mglen/grpc-eval"
   :license {:name "MIT License"
             :url "https://mit-license.org/"}
 
@@ -28,7 +28,7 @@
   {:test
    {:dependencies [[com.gfredericks/test.chuck "0.2.13"]]
     :java-source-paths ["src/java" "test/java" "target/test-gen"]
-    :repl-options {:init-ns naply.grpc-banter-test}}
+    :repl-options {:init-ns grpc-eval.core-test}}
 
    :dev
    {:dependencies [[ch.qos.logback/logback-classic "1.2.6"]
@@ -49,4 +49,4 @@
   ; TODO: Cannot 'clean' until there is a programmatic solution to compiling the file descriptor set
   ;:aliases {"build" ["do" "clean" ["protodeps" "generate"] "test"]}
 
-  :repl-options {:init-ns naply.grpc-banter})
+  :repl-options {:init-ns grpc-eval})

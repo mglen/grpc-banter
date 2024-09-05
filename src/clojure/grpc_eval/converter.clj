@@ -1,17 +1,19 @@
-(ns naply.grpc-banter.converter
+(ns grpc-eval.converter
   (:import (com.google.protobuf
              ByteString
              Descriptors$Descriptor
              Descriptors$EnumValueDescriptor
+             Descriptors$EnumDescriptor
              Descriptors$FieldDescriptor
              DynamicMessage
+             DynamicMessage$Builder
              Internal$EnumLite
              Message
              MessageLite)
            (java.util Map)
            (io.grpc StatusRuntimeException Status)
-           (naply.grpc_banter MessageConverter)
-           (naply.grpc_banter.internal RpcResponse)))
+           (grpc_eval MessageConverter)
+           (grpc_eval.internal RpcResponse)))
 
 (declare Message->clj)
 (declare clj->Message)
@@ -42,7 +44,7 @@
 
     (throw (RuntimeException. (str "Unsupported field type=[" (.getJavaType field-desc) "]")))))
 
-(defn field-name [config f-desc]
+(defn field-name [config ^Descriptors$FieldDescriptor f-desc]
   (if (:response-fields-as-keywords config)
     (keyword (.getName f-desc))
     (.getName f-desc)))
@@ -124,8 +126,7 @@
 
 (defn clj->field-value
   "Convert a clojure protobuf value to a type appropriate for the protobuf java implementation."
-  [config
-   field-value
+  [field-value
    ^Descriptors$FieldDescriptor f-desc]
   (when (some? field-value)
     (let [java-type
@@ -140,15 +141,15 @@
             "LONG"
             (cond
               (instance? Long field-value) field-value
-              (instance? Integer field-value) (.longValue field-value))
+              (instance? Integer field-value) (.longValue ^Integer field-value))
 
             "FLOAT"
             (cond
-              (instance? Number field-value) (.floatValue field-value))
+              (instance? Number field-value) (.floatValue ^Number field-value))
 
             "DOUBLE"
             (cond
-              (instance? Number field-value) (.doubleValue field-value))
+              (instance? Number field-value) (.doubleValue ^Number field-value))
 
             "STRING"
             (cond
@@ -164,10 +165,10 @@
               (instance? ByteString field-value) field-value)
 
             "ENUM"
-            (let [enum-type (.getEnumType f-desc)]
+            (let [^Descriptors$EnumDescriptor enum-type (.getEnumType f-desc)]
               (cond
-                (instance? Integer field-value) (.findValueByNumber enum-type field-value)
-                (instance? Long field-value) (.findValueByNumber enum-type (.intValue field-value))
+                (instance? Integer field-value) (.findValueByNumber enum-type ^int field-value)
+                (instance? Long field-value) (.findValueByNumber enum-type ^int (.intValue ^Long field-value))
                 (keyword? field-value) (.findValueByName enum-type (name field-value))
                 (string? field-value) (.findValueByName enum-type field-value)
                 (instance? Internal$EnumLite field-value) field-value))
@@ -175,8 +176,7 @@
             "MESSAGE"
             (cond
               (instance? Map field-value)
-              (clj->Message config
-                            field-value
+              (clj->Message field-value
                             (.getMessageType f-desc))
               (instance? MessageLite field-value) field-value)
 
@@ -193,28 +193,28 @@
 
 
 (defn clj->field
-  [config message-map ^Descriptors$FieldDescriptor f-desc]
+  [message-map ^Descriptors$FieldDescriptor f-desc]
   (cond
     (.isRepeated f-desc)
-    (mapv #(clj->field-value config % f-desc) (get-field-value message-map f-desc))
+    (mapv #(clj->field-value % f-desc) (get-field-value message-map f-desc))
     (.isOptional f-desc)
     (when-let [field-value (get-field-value message-map f-desc)]
-      (clj->field-value config field-value f-desc))
+      (clj->field-value field-value f-desc))
     :else
     (if-let [field-value (get-field-value message-map f-desc)]
-      (clj->field-value config field-value f-desc)
+      (clj->field-value field-value f-desc)
       (throw (RuntimeException.
                (format "Field [%s] is required but no value was supplied" f-desc))))))
 
 (defn clj->Message
   "Convert a clojure map of fields and values to a protobuf message"
   ^DynamicMessage
-  [config message-map ^Descriptors$Descriptor message-type]
-  (let [message-builder (DynamicMessage/newBuilder message-type)]
-    (doseq [f-desc (.getFields message-type)
-            :let [field-value (clj->field config message-map f-desc)]
+  [message-map ^Descriptors$Descriptor message-type]
+  (let [^DynamicMessage$Builder message-builder (DynamicMessage/newBuilder message-type)]
+    (doseq [^Descriptors$FieldDescriptor f-desc (.getFields message-type)
+            :let [field-value (clj->field message-map f-desc)]
             :when (some? field-value)]
-      (.setField message-builder f-desc field-value))
+      (.setField message-builder f-desc ^Object field-value))
     (.build message-builder)))
 
 (defn StatusRuntimeException->exception-info

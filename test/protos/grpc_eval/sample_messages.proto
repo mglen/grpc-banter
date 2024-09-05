@@ -1,6 +1,6 @@
 syntax = "proto2";
-package naply.grpc_banter;
-option java_package = "naply.grpc_banter";
+package grpc_eval;
+option java_package = "grpc_eval";
 option java_outer_classname = "SampleMessageProtos";
 
 enum TestEnum {

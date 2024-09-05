@@ -1,8 +1,8 @@
-(ns naply.grpc-banter
+(ns grpc-eval.core
   (:refer-clojure :exclude [methods])
-  (:require [naply.grpc-banter.schema :as s]
-            [naply.grpc-banter.converter :as c])
-  (:import (naply.grpc_banter Client FileDescriptorRegistry)
+  (:require [grpc-eval.schema :as s]
+            [grpc-eval.converter :as c])
+  (:import (grpc_eval Client FileDescriptorRegistry)
            (io.grpc StatusRuntimeException)))
 
 (defn- get-service-and-method
@@ -60,7 +60,7 @@
          request
          (.callMethod (:java-client client)
                       method-descriptor
-                      (c/clj->Message request message request-message-type)
+                      (c/clj->Message message request-message-type)
                       (c/clj->Metadata (:headers request))
                       (:deadline-millis request))
          response-message-type)
@@ -68,7 +68,7 @@
          (throw (c/StatusRuntimeException->exception-info request e)))))))
 
 (defn client
-  "Creates and returns a grpc-banter client."
+  "Creates and returns a grpc-eval client."
   [config]
   (let [config (s/decode-client-config config)]
     {:java-client (Client/create (:target config) (:use-tls config))
@@ -84,7 +84,7 @@
 
   (methods test-client)
 
-  (call test-client "naply.grpc_banter.EchoService/Echo" {:say "HelloWorld"})
+  (call test-client "grpc_eval.EchoService/Echo" {:say "HelloWorld"})
 
   )
 

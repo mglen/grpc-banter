@@ -1,4 +1,4 @@
-package naply.grpc_banter;
+package grpc_eval;
 
 import clojure.lang.*;
 import io.grpc.Metadata;

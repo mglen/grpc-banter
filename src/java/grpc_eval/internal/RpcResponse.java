@@ -1,4 +1,4 @@
-package naply.grpc_banter.internal;
+package grpc_eval.internal;
 
 import com.google.protobuf.Message;
 import io.grpc.Metadata;

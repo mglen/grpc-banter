@@ -1,4 +1,4 @@
-package naply.grpc_banter;
+package grpc_eval;
 
 import io.grpc.ForwardingServerCall;
 import io.grpc.Metadata;
